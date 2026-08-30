@@ -1,0 +1,7 @@
+<resources>
+    <!-- 深色模式下的启动窗口主题 -->
+    <style name="Theme.SmartLife" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">@color/primary</item>
+        <item name="android:navigationBarColor">@android:color/black</item>
+    </style>
+</resources>

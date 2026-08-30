@@ -1,0 +1,7 @@
+<resources>
+    <!-- Compose 启动前的窗口主题（浅色）。实际界面由 Compose Material3 主题接管。 -->
+    <style name="Theme.SmartLife" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">@color/primary</item>
+        <item name="android:navigationBarColor">@android:color/white</item>
+    </style>
+</resources>
