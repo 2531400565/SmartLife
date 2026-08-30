@@ -1,30 +1,23 @@
 package com.smartlife.app.ui.screen.timetable
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,9 +25,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.smartlife.app.data.local.WeekType
 import com.smartlife.app.data.local.entity.CourseEntity
 import com.smartlife.app.ui.components.DateField
-import com.smartlife.app.util.DateUtils
+import com.smartlife.app.ui.components.TimeField
 
 /** 星期选项：周一(1) ~ 周日(7)。 */
 private val WEEKDAYS = listOf(
@@ -44,11 +38,11 @@ private val WEEKDAYS = listOf(
 
 /**
  * 新增 / 编辑课程对话框。
- * 含：课程名称（必填）、教室（可选）、任课老师（可选）、星期选择（FlowRow 两行，全部可见）、
- * 开始/结束时间（Material3 TimePicker）、考试日期（可选，与待办共用 DateField）。
+ * 含：课程名称（必填）、教室（可选）、任课老师（可选）、星期（多选）、
+ * 周次（每周/单周/双周）、开始/结束时间、考试日期（可选）。
  *
  * 布局要点：内容区可垂直滚动，避免小屏或键盘弹出时底部内容被裁切；
- * 输入框点击采用与 DateField 相同的 disabled + 透明点击层方案，保证点击必然生效。
+ * 日期/时间字段采用统一的 disabled + 透明点击层方案，保证点击必然生效。
  */
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -59,19 +53,21 @@ fun CourseAddEditDialog(
         name: String,
         location: String?,
         teacher: String?,
-        dayOfWeek: Int,
+        weekdays: Set<Int>,
         startMinute: Int,
         endMinute: Int,
-        examDate: Long?
+        examDate: Long?,
+        weekType: WeekType
     ) -> Unit
 ) {
     var name by remember(editingCourse) { mutableStateOf(editingCourse?.name ?: "") }
     var location by remember(editingCourse) { mutableStateOf(editingCourse?.location ?: "") }
     var teacher by remember(editingCourse) { mutableStateOf(editingCourse?.teacher ?: "") }
-    var dayOfWeek by remember(editingCourse) { mutableStateOf(editingCourse?.dayOfWeek ?: 1) }
+    var weekdays by remember(editingCourse) { mutableStateOf(editingCourse?.weekdays ?: setOf(1)) }
     var startMinute by remember(editingCourse) { mutableStateOf(editingCourse?.startMinute ?: 8 * 60) }
     var endMinute by remember(editingCourse) { mutableStateOf(editingCourse?.endMinute ?: 9 * 60 + 35) }
     var examDate by remember(editingCourse) { mutableStateOf(editingCourse?.examDate) }
+    var weekType by remember(editingCourse) { mutableStateOf(editingCourse?.weekType ?: WeekType.EVERY) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -108,7 +104,7 @@ fun CourseAddEditDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                // 星期选择：FlowRow 每行 4 个 → 周一~周四 / 周五~周日 两行全部可见，不会被裁切
+                // 星期：多选（点击切换），至少选一个才能保存
                 Text("星期", style = MaterialTheme.typography.labelLarge)
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
@@ -118,10 +114,32 @@ fun CourseAddEditDialog(
                 ) {
                     WEEKDAYS.forEach { (label, day) ->
                         FilterChip(
-                            selected = dayOfWeek == day,
-                            onClick = { dayOfWeek = day },
+                            selected = day in weekdays,
+                            onClick = {
+                                weekdays = if (day in weekdays) weekdays - day else weekdays + day
+                            },
                             label = { Text(label) }
                         )
+                    }
+                }
+                if (weekdays.isEmpty()) {
+                    Text(
+                        text = "请至少选择一个星期",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                // 周次（每周/单周/双周）
+                Text("周次", style = MaterialTheme.typography.labelLarge)
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    WeekType.entries.forEachIndexed { index, wt ->
+                        SegmentedButton(
+                            selected = weekType == wt,
+                            onClick = { weekType = wt },
+                            shape = SegmentedButtonDefaults.itemShape(index, WeekType.entries.size)
+                        ) {
+                            Text(wt.label)
+                        }
                     }
                 }
                 // 开始 / 结束时间
@@ -162,13 +180,14 @@ fun CourseAddEditDialog(
                         name.trim(),
                         location.trim().ifBlank { null },
                         teacher.trim().ifBlank { null },
-                        dayOfWeek,
+                        weekdays,
                         startMinute,
                         endMinute,
-                        examDate
+                        examDate,
+                        weekType
                     )
                 },
-                enabled = name.isNotBlank() && endMinute > startMinute
+                enabled = name.isNotBlank() && endMinute > startMinute && weekdays.isNotEmpty()
             ) {
                 Text("保存")
             }
@@ -177,74 +196,4 @@ fun CourseAddEditDialog(
             TextButton(onClick = onDismiss) { Text("取消") }
         }
     )
-}
-
-/**
- * 时间输入框：只读展示，点击弹出 Material3 TimePicker（24 小时制）。
- * 与 DateField 同样采用 enabled=false + 透明点击层，避免只读输入框吞掉点击事件。
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun TimeField(
-    label: String,
-    minute: Int,
-    onSelected: (Int) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var showPicker by remember { mutableStateOf(false) }
-
-    Box(modifier = modifier) {
-        OutlinedTextField(
-            value = DateUtils.formatMinute(minute),
-            onValueChange = {},
-            enabled = false,
-            label = { Text(label) },
-            trailingIcon = {
-                Icon(
-                    imageVector = Icons.Outlined.Schedule,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-            },
-            singleLine = true,
-            colors = OutlinedTextFieldDefaults.colors(
-                disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                disabledBorderColor = MaterialTheme.colorScheme.outline,
-                disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant
-            ),
-            modifier = Modifier.fillMaxWidth()
-        )
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = { showPicker = true }
-                )
-        )
-    }
-
-    if (showPicker) {
-        val timeState = rememberTimePickerState(
-            initialHour = minute / 60,
-            initialMinute = minute % 60,
-            is24Hour = true
-        )
-        AlertDialog(
-            onDismissRequest = { showPicker = false },
-            title = { Text("选择$label") },
-            text = { TimePicker(state = timeState) },
-            confirmButton = {
-                TextButton(onClick = {
-                    onSelected(timeState.hour * 60 + timeState.minute)
-                    showPicker = false
-                }) { Text("确定") }
-            },
-            dismissButton = {
-                TextButton(onClick = { showPicker = false }) { Text("取消") }
-            }
-        )
-    }
 }

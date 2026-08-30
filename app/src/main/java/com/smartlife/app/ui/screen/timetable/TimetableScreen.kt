@@ -49,8 +49,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.smartlife.app.data.local.WeekType
 import com.smartlife.app.data.local.entity.CourseEntity
 import com.smartlife.app.util.DateUtils
+import com.smartlife.app.util.WeekUtils
 
 /** 课程视觉色板（按课程 id 取色，稳定且不入库）。 */
 private val COURSE_COLORS = listOf(
@@ -81,12 +83,21 @@ fun TimetableScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 20.dp)
         ) {
-            // ===== 标题 =====
-            Text(
-                text = "课表",
-                style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.padding(top = 20.dp, bottom = 14.dp)
-            )
+            // ===== 标题 + 当前周次（单双周）=====
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 20.dp, bottom = 14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = "课表", style = MaterialTheme.typography.headlineSmall)
+                Text(
+                    text = WeekUtils.currentWeekText(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
 
             // ===== 横向星期选择栏（默认选中今天）=====
             DaySelector(
@@ -127,8 +138,8 @@ fun TimetableScreen(
         CourseAddEditDialog(
             editingCourse = uiState.editingCourse,
             onDismiss = viewModel::dismissEditor,
-            onSave = { name, location, teacher, day, start, end, examDate ->
-                viewModel.saveCourse(name, location, teacher, day, start, end, examDate)
+            onSave = { name, location, teacher, weekdays, start, end, examDate, weekType ->
+                viewModel.saveCourse(name, location, teacher, weekdays, start, end, examDate, weekType)
             }
         )
     }
@@ -262,6 +273,14 @@ private fun CourseCard(
                             DateUtils.formatMinute(course.endMinute),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                // 单双周徽标（每周不显示）
+                if (course.weekType != WeekType.EVERY) {
+                    Text(
+                        text = course.weekType.label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.tertiary
                     )
                 }
                 if (!course.location.isNullOrBlank()) {

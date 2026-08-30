@@ -35,13 +35,13 @@ interface TaskDao {
     fun observeById(id: Long): Flow<TaskEntity?>
 
     /** 观察全部任务（未完成在前、按截止时间升序、再按创建时间倒序）。 */
-    @Query("SELECT * FROM tasks ORDER BY isCompleted ASC, dueDate ASC, createdAt DESC")
+    @Query("SELECT * FROM tasks ORDER BY isCompleted ASC, dueDateTime ASC, createdAt DESC")
     fun observeAll(): Flow<List<TaskEntity>>
 
     // ===== 列表 / 状态查询 =====
 
     /** 未完成任务列表（按截止时间升序）。 */
-    @Query("SELECT * FROM tasks WHERE isCompleted = 0 ORDER BY dueDate ASC")
+    @Query("SELECT * FROM tasks WHERE isCompleted = 0 ORDER BY dueDateTime ASC")
     fun observeIncomplete(): Flow<List<TaskEntity>>
 
     /** 已完成任务列表（按完成时间倒序）。 */
@@ -52,8 +52,8 @@ interface TaskDao {
     @Query("SELECT * FROM tasks WHERE title LIKE '%' || :query || '%' ORDER BY createdAt DESC")
     fun search(query: String): Flow<List<TaskEntity>>
 
-    /** 今日待办数量：未完成且 today 00:00 <= dueDate < 次日 00:00。 */
-    @Query("SELECT COUNT(*) FROM tasks WHERE isCompleted = 0 AND dueDate >= :startOfDay AND dueDate < :startOfNextDay")
+    /** 今日待办数量：未完成且 today 00:00 <= dueDateTime < 次日 00:00。 */
+    @Query("SELECT COUNT(*) FROM tasks WHERE isCompleted = 0 AND dueDateTime >= :startOfDay AND dueDateTime < :startOfNextDay")
     fun observeTodayCount(startOfDay: Long, startOfNextDay: Long): Flow<Int>
 
     /** 未完成总数（首页角标等用途）。 */

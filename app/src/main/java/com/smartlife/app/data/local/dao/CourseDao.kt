@@ -10,7 +10,8 @@ import com.smartlife.app.data.local.entity.CourseEntity
 import kotlinx.coroutines.flow.Flow
 
 /**
- * 课程 DAO：完整 CRUD + 按星期查询。
+ * 课程 DAO：完整 CRUD + 全量观察。
+ * 单双周 / 多星期的过滤在 Repository / ViewModel 内存层完成（集合字段无法用 SQL 精确匹配）。
  */
 @Dao
 interface CourseDao {
@@ -33,17 +34,7 @@ interface CourseDao {
     @Query("SELECT * FROM courses WHERE id = :id")
     fun observeById(id: Long): Flow<CourseEntity?>
 
-    /** 观察全部课程（按星期、开始时间排序）。 */
-    @Query("SELECT * FROM courses ORDER BY dayOfWeek ASC, startMinute ASC")
+    /** 观察全部课程（按开始时间升序；星期/单双周过滤在内存层完成）。 */
+    @Query("SELECT * FROM courses ORDER BY startMinute ASC")
     fun observeAll(): Flow<List<CourseEntity>>
-
-    // ===== 星期维度查询 =====
-
-    /** 按星期查询课程（dayOfWeek: 1~7，按开始时间升序）。 */
-    @Query("SELECT * FROM courses WHERE dayOfWeek = :dayOfWeek ORDER BY startMinute ASC")
-    fun observeByDay(dayOfWeek: Int): Flow<List<CourseEntity>>
-
-    /** 指定星期的课程数量（用于"今日课程数量"统计）。 */
-    @Query("SELECT COUNT(*) FROM courses WHERE dayOfWeek = :dayOfWeek")
-    fun observeCountByDay(dayOfWeek: Int): Flow<Int>
 }

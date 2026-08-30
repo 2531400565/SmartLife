@@ -51,7 +51,7 @@ object DateUtils {
             "${cal.get(Calendar.DAY_OF_MONTH)}日 $weekday"
     }
 
-    /** 截止日期展示文本：今天 / 明天 / X月X日（跨年时带年份）。 */
+    /** 截止日期展示文本（仅日期）：今天 / 明天 / X月X日（跨年时带年份）。 */
     fun dueDateText(timestamp: Long): String {
         val now = Calendar.getInstance()
         val due = Calendar.getInstance().apply { timeInMillis = timestamp }
@@ -67,16 +67,61 @@ object DateUtils {
     }
 
     /**
-     * 任务是否逾期：未完成 + 有截止日期 + 截止日早于今天。
-     *
-     * 截止日期统一存为"当天 23:59:59"，与"今天 00:00"比较即可得到正确结果：
-     * - 昨天及更早 → 逾期
-     * - 今天 → 不逾期（同一天内）
-     * - 明天及更晚 → 不逾期
-     * - 已完成 → 无论日期如何都不算逾期
+     * 截止日期时间展示文本（日期 + 时间）：
+     * 今天 → "今天 18:30"；明天 → "明天 09:00"；其他 → "9月3日 14:20"。
      */
-    fun isOverdue(dueDate: Long?, isCompleted: Boolean): Boolean =
-        !isCompleted && dueDate != null && dueDate < startOfToday()
+    fun dueDateTimeText(timestamp: Long): String {
+        val due = Calendar.getInstance().apply { timeInMillis = timestamp }
+        val hm = "%02d:%02d".format(due.get(Calendar.HOUR_OF_DAY), due.get(Calendar.MINUTE))
+        val date = when (startOfDay(timestamp)) {
+            startOfToday() -> "今天"
+            startOfNextDay() -> "明天"
+            else -> {
+                val now = Calendar.getInstance()
+                val yearPrefix =
+                    if (due.get(Calendar.YEAR) != now.get(Calendar.YEAR)) "${due.get(Calendar.YEAR)}年" else ""
+                "${yearPrefix}${due.get(Calendar.MONTH) + 1}月${due.get(Calendar.DAY_OF_MONTH)}日"
+            }
+        }
+        return "$date $hm"
+    }
+
+    /**
+     * 任务是否逾期：未完成 + 有截止时间 + 截止时刻早于「当前时刻」。
+     * 精确到时分秒，不再按整天判断。
+     */
+    fun isOverdue(dueDateTime: Long?, isCompleted: Boolean): Boolean =
+        !isCompleted && dueDateTime != null && dueDateTime < System.currentTimeMillis()
+
+    /** 逾期时长展示文本："已逾期 X小时" / "已逾期 X分钟" / "已逾期"。 */
+    fun overdueDurationText(timestamp: Long): String {
+        val diff = System.currentTimeMillis() - timestamp
+        val hours = diff / 3_600_000L
+        val minutes = diff / 60_000L
+        return when {
+            hours >= 1 -> "已逾期 $hours 小时"
+            minutes >= 1 -> "已逾期 $minutes 分钟"
+            else -> "已逾期"
+        }
+    }
+
+    /** 取时间戳的当天分钟数（HH:mm → 0~1439）。 */
+    fun minutesOfDay(timestamp: Long): Int {
+        val cal = Calendar.getInstance().apply { timeInMillis = timestamp }
+        return cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
+    }
+
+    /** 将「某天的日期」与「HH:mm 分钟数」合并为完整时间戳。 */
+    fun combineDateAndTime(dateMillis: Long, minutesOfDay: Int): Long {
+        val date = Calendar.getInstance().apply { timeInMillis = dateMillis }
+        return Calendar.getInstance().apply {
+            set(
+                date.get(Calendar.YEAR), date.get(Calendar.MONTH), date.get(Calendar.DAY_OF_MONTH),
+                minutesOfDay / 60, minutesOfDay % 60, 0
+            )
+            set(Calendar.MILLISECOND, 0)
+        }.timeInMillis
+    }
 
     /**
      * 本地"当天零点" → Material3 DatePicker 使用的 UTC 当天零点。

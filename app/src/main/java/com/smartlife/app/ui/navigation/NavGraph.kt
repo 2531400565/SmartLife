@@ -58,15 +58,7 @@ fun AppNavigation() {
                 items.forEach { item ->
                     NavigationBarItem(
                         selected = currentRoute == item.route,
-                        onClick = {
-                            navController.navigate(item.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
+                        onClick = { navController.navigateToTab(item.route) },
                         icon = { Icon(item.icon, contentDescription = item.label) },
                         label = { Text(item.label) }
                     )
@@ -79,11 +71,28 @@ fun AppNavigation() {
             startDestination = Routes.DASHBOARD,
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable(Routes.DASHBOARD) { DashboardScreen() }
+            composable(Routes.DASHBOARD) {
+                DashboardScreen(
+                    onNavigateTodo = { navController.navigateToTab(Routes.TODO) },
+                    onNavigateTimetable = { navController.navigateToTab(Routes.TIMETABLE) },
+                    onNavigateFocus = { navController.navigateToTab(Routes.FOCUS) }
+                )
+            }
             composable(Routes.TODO) { TodoScreen() }
             composable(Routes.FOCUS) { FocusScreen() }
             composable(Routes.TIMETABLE) { TimetableScreen() }
             composable(Routes.PROFILE) { ProfileScreen() }
         }
+    }
+}
+
+/** 底部导航跳转：保留各 Tab 状态、单实例、回到栈顶。首页卡片跳转复用同一策略。 */
+private fun NavHostController.navigateToTab(route: String) {
+    navigate(route) {
+        popUpTo(graph.findStartDestination().id) {
+            saveState = true
+        }
+        launchSingleTop = true
+        restoreState = true
     }
 }

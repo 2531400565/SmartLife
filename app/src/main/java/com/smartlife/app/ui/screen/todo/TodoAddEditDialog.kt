@@ -2,6 +2,7 @@ package com.smartlife.app.ui.screen.todo
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -22,22 +23,25 @@ import androidx.compose.ui.unit.dp
 import com.smartlife.app.data.local.Priority
 import com.smartlife.app.data.local.entity.TaskEntity
 import com.smartlife.app.ui.components.DateField
+import com.smartlife.app.ui.components.TimeField
+import com.smartlife.app.util.DateUtils
 
 /**
  * 新增 / 编辑任务对话框。
- * 包含：标题（必填）、描述（可选）、优先级（低/中/高 分段选择）、截止日期（统一日期组件）。
+ * 含：标题（必填）、描述（可选）、优先级（低/中/高 分段选择）、
+ * 截止时间（日期 DateField + 时间 TimeField，共同组成 dueDateTime）。
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TodoAddEditDialog(
     editingTask: TaskEntity?,
     onDismiss: () -> Unit,
-    onSave: (title: String, description: String?, priority: Priority, dueDate: Long?) -> Unit
+    onSave: (title: String, description: String?, priority: Priority, dueDateTime: Long?) -> Unit
 ) {
     var title by remember(editingTask) { mutableStateOf(editingTask?.title ?: "") }
     var description by remember(editingTask) { mutableStateOf(editingTask?.description ?: "") }
     var priority by remember(editingTask) { mutableStateOf(editingTask?.priority ?: Priority.MEDIUM) }
-    var dueDate by remember(editingTask) { mutableStateOf(editingTask?.dueDate) }
+    var dueDateTime by remember(editingTask) { mutableStateOf(editingTask?.dueDateTime) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -78,19 +82,41 @@ fun TodoAddEditDialog(
                         }
                     }
                 }
-                // 截止日期：与应用内其他日期字段共用 DateField（点击打开 DatePicker，可清除）
-                DateField(
-                    label = "截止日期",
-                    timestamp = dueDate,
-                    onDateChange = { dueDate = it },
-                    emptyText = "未设置截止日期"
-                )
+                // 截止时间（日期 + 时间）
+                Text("截止时间", style = MaterialTheme.typography.labelLarge)
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    DateField(
+                        label = "日期",
+                        timestamp = dueDateTime,
+                        onDateChange = { newDate ->
+                            dueDateTime = if (newDate == null) {
+                                null // 清除日期即清除整个截止时间
+                            } else {
+                                // 保留已选时间；若尚未选时间则默认 23:59（与旧版仅日期语义一致）
+                                val time = dueDateTime?.let { DateUtils.minutesOfDay(it) } ?: (23 * 60 + 59)
+                                DateUtils.combineDateAndTime(newDate, time)
+                            }
+                        },
+                        emptyText = "选择日期",
+                        modifier = Modifier.weight(1f)
+                    )
+                    TimeField(
+                        label = "时间",
+                        minute = dueDateTime?.let { DateUtils.minutesOfDay(it) } ?: (23 * 60 + 59),
+                        onSelected = { minutes ->
+                            // 未选日期时先按今天处理
+                            val date = dueDateTime ?: System.currentTimeMillis()
+                            dueDateTime = DateUtils.combineDateAndTime(date, minutes)
+                        },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
         },
         confirmButton = {
             TextButton(
                 onClick = {
-                    onSave(title.trim(), description.trim().ifBlank { null }, priority, dueDate)
+                    onSave(title.trim(), description.trim().ifBlank { null }, priority, dueDateTime)
                 },
                 enabled = title.isNotBlank()
             ) {

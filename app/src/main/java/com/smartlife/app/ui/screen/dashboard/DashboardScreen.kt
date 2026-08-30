@@ -38,6 +38,9 @@ import androidx.lifecycle.viewmodel.compose.viewModel
  */
 @Composable
 fun DashboardScreen(
+    onNavigateTodo: () -> Unit,
+    onNavigateTimetable: () -> Unit,
+    onNavigateFocus: () -> Unit,
     viewModel: DashboardViewModel = viewModel(factory = DashboardViewModel.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -87,18 +90,21 @@ fun DashboardScreen(
                     label = "待办",
                     value = uiState.todayTodoCount.toString(),
                     icon = Icons.Outlined.Checklist,
+                    onClick = onNavigateTodo,
                     modifier = Modifier.weight(1f)
                 )
                 StatCard(
                     label = "课程",
                     value = uiState.todayCourseCount.toString(),
                     icon = Icons.Outlined.School,
+                    onClick = onNavigateTimetable,
                     modifier = Modifier.weight(1f)
                 )
                 StatCard(
                     label = "专注",
                     value = uiState.todayFocusText,
                     icon = Icons.Outlined.Timer,
+                    onClick = onNavigateFocus,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -149,15 +155,17 @@ private fun QuoteCard(quote: String, onClick: () -> Unit) {
     }
 }
 
-/** 统计卡片：图标 + 数值 + 标签（圆角、浅阴影、深色自适应）。 */
+/** 统计卡片：图标 + 数值 + 标签（圆角、浅阴影、深色自适应、可点击带 Ripple）。 */
 @Composable
 private fun StatCard(
     label: String,
     value: String,
     icon: ImageVector,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
+        onClick = onClick,
         modifier = modifier,
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(

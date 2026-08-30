@@ -134,8 +134,8 @@ fun TodoScreen(
         TodoAddEditDialog(
             editingTask = uiState.editingTask,
             onDismiss = viewModel::dismissEditor,
-            onSave = { title, description, priority, dueDate ->
-                viewModel.saveTask(title, description, priority, dueDate)
+            onSave = { title, description, priority, dueDateTime ->
+                viewModel.saveTask(title, description, priority, dueDateTime)
             }
         )
     }
@@ -166,8 +166,8 @@ private fun TaskItem(
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
-    // 未完成 + 截止日早于今天 → 逾期（判定统一收在 DateUtils，便于复现验证）
-    val isOverdue = DateUtils.isOverdue(task.dueDate, task.isCompleted)
+    // 未完成 + 截止时刻早于当前 → 逾期（精确到时分秒，判定统一收在 DateUtils）
+    val isOverdue = DateUtils.isOverdue(task.dueDateTime, task.isCompleted)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -213,17 +213,18 @@ private fun TaskItem(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     PriorityLabel(task.priority)
-                    if (isOverdue) OverdueChip()
-                    task.dueDate?.let { ts ->
-                        Text(
-                            text = DateUtils.dueDateText(ts),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (isOverdue) {
-                                MaterialTheme.colorScheme.error
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            }
-                        )
+                    task.dueDateTime?.let { ts ->
+                        if (isOverdue) {
+                            // 逾期：显示 "已逾期 X小时"
+                            OverdueChip(DateUtils.overdueDurationText(ts))
+                        } else {
+                            // 正常：显示 "今天 18:30" / "明天 09:00" / "9月3日 14:20"
+                            Text(
+                                text = DateUtils.dueDateTimeText(ts),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
@@ -253,14 +254,14 @@ private fun PriorityLabel(priority: Priority) {
  * 浅色与深色模式下均由 Material3 保证文字与底色对比度，不会看不清。
  */
 @Composable
-private fun OverdueChip() {
+private fun OverdueChip(text: String) {
     Surface(
         shape = MaterialTheme.shapes.small,
         color = MaterialTheme.colorScheme.errorContainer,
         contentColor = MaterialTheme.colorScheme.onErrorContainer
     ) {
         Text(
-            text = "已逾期",
+            text = text,
             style = MaterialTheme.typography.labelSmall,
             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
         )

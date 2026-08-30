@@ -78,7 +78,7 @@ class TodoViewModel(application: Application) : AndroidViewModel(application) {
     fun dismissEditor() = _uiState.update { it.copy(showEditor = false, editingTask = null) }
 
     /** 保存任务：编辑模式下更新原任务，否则新增。 */
-    fun saveTask(title: String, description: String?, priority: Priority, dueDate: Long?) {
+    fun saveTask(title: String, description: String?, priority: Priority, dueDateTime: Long?) {
         val editing = _uiState.value.editingTask
         viewModelScope.launch {
             if (editing == null) {
@@ -87,7 +87,7 @@ class TodoViewModel(application: Application) : AndroidViewModel(application) {
                         title = title,
                         description = description,
                         priority = priority,
-                        dueDate = dueDate
+                        dueDateTime = dueDateTime
                     )
                 )
             } else {
@@ -96,7 +96,7 @@ class TodoViewModel(application: Application) : AndroidViewModel(application) {
                         title = title,
                         description = description,
                         priority = priority,
-                        dueDate = dueDate
+                        dueDateTime = dueDateTime
                     )
                 )
             }

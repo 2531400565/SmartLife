@@ -1,6 +1,7 @@
 package com.smartlife.app.util
 
 import com.smartlife.app.data.local.Priority
+import com.smartlife.app.data.local.WeekType
 import com.smartlife.app.data.local.entity.CourseEntity
 import com.smartlife.app.data.local.entity.FocusSessionEntity
 import com.smartlife.app.data.local.entity.QuoteEntity
@@ -93,7 +94,7 @@ object JsonBackup {
         put("title", title)
         put("description", description ?: JSONObject.NULL)
         put("priority", priority.name)
-        put("dueDate", dueDate ?: JSONObject.NULL)
+        put("dueDateTime", dueDateTime ?: JSONObject.NULL)
         put("isCompleted", isCompleted)
         put("createdAt", createdAt)
         put("completedAt", completedAt ?: JSONObject.NULL)
@@ -104,10 +105,11 @@ object JsonBackup {
         put("name", name)
         put("location", location ?: JSONObject.NULL)
         put("teacher", teacher ?: JSONObject.NULL)
-        put("dayOfWeek", dayOfWeek)
+        put("weekdays", JSONArray().apply { weekdays.sorted().forEach { put(it) } })
         put("startMinute", startMinute)
         put("endMinute", endMinute)
         put("examDate", examDate ?: JSONObject.NULL)
+        put("weekType", weekType.name)
     }
 
     private fun FocusSessionEntity.toJson() = JSONObject().apply {
@@ -138,7 +140,11 @@ object JsonBackup {
                 description = if (o.isNull("description")) null else o.optString("description"),
                 priority = runCatching { Priority.valueOf(o.optString("priority", "MEDIUM")) }
                     .getOrDefault(Priority.MEDIUM),
-                dueDate = if (o.isNull("dueDate")) null else o.optLong("dueDate"),
+                dueDateTime = when {
+                    !o.isNull("dueDateTime") -> o.optLong("dueDateTime")
+                    !o.isNull("dueDate") -> o.optLong("dueDate") // 兼容旧备份字段
+                    else -> null
+                },
                 isCompleted = o.optBoolean("isCompleted", false),
                 createdAt = o.optLong("createdAt", System.currentTimeMillis()),
                 completedAt = if (o.isNull("completedAt")) null else o.optLong("completedAt")
@@ -158,13 +164,27 @@ object JsonBackup {
                 name = name,
                 location = if (o.isNull("location")) null else o.optString("location"),
                 teacher = if (o.isNull("teacher")) null else o.optString("teacher"),
-                dayOfWeek = o.optInt("dayOfWeek", 1).coerceIn(1, 7),
+                weekdays = parseWeekdays(o),
                 startMinute = o.optInt("startMinute", 0).coerceIn(0, 1439),
                 endMinute = o.optInt("endMinute", 0).coerceIn(0, 1439),
-                examDate = if (o.isNull("examDate")) null else o.optLong("examDate")
+                examDate = if (o.isNull("examDate")) null else o.optLong("examDate"),
+                weekType = runCatching { WeekType.valueOf(o.optString("weekType", "EVERY")) }
+                    .getOrDefault(WeekType.EVERY)
             )
         }
         return list
+    }
+
+    /** 解析 weekdays 集合：优先读 weekdays 数组，回退旧版 dayOfWeek 单值。 */
+    private fun parseWeekdays(o: JSONObject): Set<Int> {
+        val arr = o.optJSONArray("weekdays")
+        if (arr != null) {
+            val set = mutableSetOf<Int>()
+            for (i in 0 until arr.length()) set.add(arr.optInt(i).coerceIn(1, 7))
+            return set.ifEmpty { setOf(1) }
+        }
+        val single = o.optInt("dayOfWeek", 0)
+        return if (single in 1..7) setOf(single) else setOf(1)
     }
 
     private fun parseSessions(array: JSONArray): List<FocusSessionEntity> {
