@@ -18,8 +18,6 @@
 
 ## 📱 Screenshots
 
-> 截图待补充，将放置于 `screenshots/` 目录（home / todo / focus / timetable）。图片存在前以下引用会显示占位。
-
 | 首页 Home | 待办 Todo |
 | --- | --- |
 | ![Home](./screenshots/home.png) | ![Todo](./screenshots/todo.png) |
