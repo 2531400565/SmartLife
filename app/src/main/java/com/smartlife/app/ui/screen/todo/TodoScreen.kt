@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+
 package com.smartlife.app.ui.screen.todo
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -53,7 +55,6 @@ import com.smartlife.app.util.DateUtils
 /**
  * 待办页：任务列表（未完成置顶、按截止时间排序）+ 搜索 + 新增/编辑/删除 + 完成勾选。
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun TodoScreen(
     viewModel: TodoViewModel = viewModel(factory = TodoViewModel.Factory)

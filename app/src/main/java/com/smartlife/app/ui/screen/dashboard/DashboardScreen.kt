@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.FormatQuote
+import androidx.compose.material.icons.outlined.FormatQuote
 import androidx.compose.material.icons.outlined.Checklist
 import androidx.compose.material.icons.outlined.School
 import androidx.compose.material.icons.outlined.Timer
@@ -123,7 +123,7 @@ private fun QuoteCard(quote: String, onClick: () -> Unit) {
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.FormatQuote,
+                    imageVector = Icons.Outlined.FormatQuote,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)

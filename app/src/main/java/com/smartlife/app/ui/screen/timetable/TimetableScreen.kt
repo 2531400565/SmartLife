@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
+
 package com.smartlife.app.ui.screen.timetable
 
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -59,7 +61,6 @@ private val COURSE_COLORS = listOf(
  * 课程表页：横向星期选择（默认今天）+ 当天课程列表 + 考试倒计时 + 增删改。
  * 数据全部来自 CourseRepository（Room 持久化）。
  */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun TimetableScreen(
     viewModel: TimetableViewModel = viewModel(factory = TimetableViewModel.Factory)
