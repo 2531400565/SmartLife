@@ -56,6 +56,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ProfileScreen(
     onNavigateSemester: () -> Unit,
+    onNavigateSemesterCourses: () -> Unit,
     viewModel: ProfileViewModel = viewModel(factory = ProfileViewModel.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -130,7 +131,10 @@ fun ProfileScreen(
                     StatCard("完成轮数", "${uiState.completedFocusSessions} 轮", Modifier.weight(1f))
                 }
                 Spacer(modifier = Modifier.height(12.dp))
-                StatCard("课程总数", uiState.totalCourses.toString(), Modifier.fillMaxWidth())
+                SemesterSummaryCard(
+                    count = uiState.totalCourses,
+                    onClick = onNavigateSemesterCourses
+                )
             }
 
             // ===== 外观（主题）=====
@@ -361,6 +365,44 @@ private fun StatCard(label: String, value: String, modifier: Modifier = Modifier
                 text = label,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/** 当前学期统计卡：标题 + 大数字 + 右侧 Chevron，整卡可点击（Material Ripple）。 */
+@Composable
+private fun SemesterSummaryCard(count: Int, onClick: () -> Unit) {
+    Card(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "当前学期",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = "$count 门课程",
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Icon(
+                imageVector = Icons.Outlined.ChevronRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }

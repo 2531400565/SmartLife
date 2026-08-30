@@ -10,4 +10,5 @@ object Routes {
     const val TIMETABLE = "timetable"
     const val PROFILE = "profile"
     const val SEMESTER = "semester"
+    const val SEMESTER_COURSES = "semester_courses"
 }

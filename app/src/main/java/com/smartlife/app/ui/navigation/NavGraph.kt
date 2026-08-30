@@ -25,6 +25,7 @@ import androidx.navigation.compose.rememberNavController
 import com.smartlife.app.ui.screen.dashboard.DashboardScreen
 import com.smartlife.app.ui.screen.focus.FocusScreen
 import com.smartlife.app.ui.screen.profile.ProfileScreen
+import com.smartlife.app.ui.screen.semester.SemesterCoursesScreen
 import com.smartlife.app.ui.screen.semester.SemesterScreen
 import com.smartlife.app.ui.screen.timetable.TimetableScreen
 import com.smartlife.app.ui.screen.todo.TodoScreen
@@ -91,11 +92,15 @@ fun AppNavigation() {
             composable(Routes.TIMETABLE) { TimetableScreen() }
             composable(Routes.PROFILE) {
                 ProfileScreen(
-                    onNavigateSemester = { navController.navigate(Routes.SEMESTER) }
+                    onNavigateSemester = { navController.navigate(Routes.SEMESTER) },
+                    onNavigateSemesterCourses = { navController.navigate(Routes.SEMESTER_COURSES) }
                 )
             }
             composable(Routes.SEMESTER) {
                 SemesterScreen(onBack = { navController.popBackStack() })
+            }
+            composable(Routes.SEMESTER_COURSES) {
+                SemesterCoursesScreen(onBack = { navController.popBackStack() })
             }
         }
     }
