@@ -9,4 +9,5 @@ object Routes {
     const val FOCUS = "focus"
     const val TIMETABLE = "timetable"
     const val PROFILE = "profile"
+    const val SEMESTER = "semester"
 }

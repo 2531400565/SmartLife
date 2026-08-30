@@ -149,6 +149,22 @@ object DateUtils {
         }.timeInMillis
     }
 
+    /** 日期 → "yyyy-MM-dd"（如 "2026-09-10"，学期开始日期展示）。 */
+    fun formatDateDash(timestamp: Long): String {
+        val cal = Calendar.getInstance().apply { timeInMillis = timestamp }
+        return "%04d-%02d-%02d".format(
+            cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, cal.get(Calendar.DAY_OF_MONTH)
+        )
+    }
+
+    /** 日期 → "yyyy/MM/dd"（如 "2026/09/10"，周起止日期展示）。 */
+    fun formatDateSlash(timestamp: Long): String {
+        val cal = Calendar.getInstance().apply { timeInMillis = timestamp }
+        return "%04d/%02d/%02d".format(
+            cal.get(Calendar.YEAR), cal.get(Calendar.MONTH) + 1, cal.get(Calendar.DAY_OF_MONTH)
+        )
+    }
+
     /** 当天分钟数(0~1439) → "HH:mm"（课程表时间展示）。 */
     fun formatMinute(minute: Int): String = "%02d:%02d".format(minute / 60, minute % 60)
 

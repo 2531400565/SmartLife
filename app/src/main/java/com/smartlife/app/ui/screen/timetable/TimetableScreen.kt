@@ -52,7 +52,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.smartlife.app.data.local.WeekType
 import com.smartlife.app.data.local.entity.CourseEntity
 import com.smartlife.app.util.DateUtils
-import com.smartlife.app.util.WeekUtils
 
 /** 课程视觉色板（按课程 id 取色，稳定且不入库）。 */
 private val COURSE_COLORS = listOf(
@@ -83,20 +82,48 @@ fun TimetableScreen(
                 .padding(innerPadding)
                 .padding(horizontal = 20.dp)
         ) {
-            // ===== 标题 + 当前周次（单双周）=====
-            Row(
+            // ===== 标题 + 周信息（主标题 / 副标题，按学期动态计算）=====
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 20.dp, bottom = 14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(top = 20.dp, bottom = 14.dp)
             ) {
                 Text(text = "课表", style = MaterialTheme.typography.headlineSmall)
-                Text(
-                    text = WeekUtils.currentWeekText(),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
-                )
+                Spacer(modifier = Modifier.height(8.dp))
+                val startDate = uiState.semesterStartDate
+                if (uiState.isNotStarted) {
+                    Text(
+                        text = "未开学",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = if (startDate == null) {
+                            "请在「我的 → 学期设置」设置开学日期"
+                        } else {
+                            "学期将于 ${DateUtils.formatDateDash(startDate)} 开始"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    val week = uiState.weekNumber ?: 1
+                    val typeLabel = uiState.weekType?.label ?: ""
+                    Text(
+                        text = "第${week}周 · $typeLabel",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    val weekStart = uiState.weekStart
+                    val weekEnd = uiState.weekEnd
+                    if (weekStart != null && weekEnd != null) {
+                        Text(
+                            text = "${DateUtils.formatDateSlash(weekStart)} - ${DateUtils.formatDateSlash(weekEnd)}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
 
             // ===== 横向星期选择栏（默认选中今天）=====

@@ -2,9 +2,9 @@ package com.smartlife.app.ui.navigation
 
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.List
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.automirrored.outlined.List
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Timer
 import androidx.compose.material3.Icon
@@ -25,6 +25,7 @@ import androidx.navigation.compose.rememberNavController
 import com.smartlife.app.ui.screen.dashboard.DashboardScreen
 import com.smartlife.app.ui.screen.focus.FocusScreen
 import com.smartlife.app.ui.screen.profile.ProfileScreen
+import com.smartlife.app.ui.screen.semester.SemesterScreen
 import com.smartlife.app.ui.screen.timetable.TimetableScreen
 import com.smartlife.app.ui.screen.todo.TodoScreen
 
@@ -34,13 +35,20 @@ private data class BottomNavItem(
     val icon: ImageVector
 )
 
+/** 底部导航 Tab 路由集合（非 Tab 路由不显示底栏）。 */
+private val tabRoutes = setOf(
+    Routes.DASHBOARD, Routes.TODO, Routes.FOCUS, Routes.TIMETABLE, Routes.PROFILE
+)
+
 /**
  * 应用根导航：底部 5 个 Tab + NavHost 路由容器。
- * Phase 0 仅搭建骨架，各 Screen 为占位实现，业务功能在后续模块填充。
+ * 学期设置等二级页面为独立路由，隐藏底栏、使用顶栏返回。
  */
 @Composable
 fun AppNavigation() {
     val navController: NavHostController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
 
     val items = listOf(
         BottomNavItem(Routes.DASHBOARD, "首页", Icons.Outlined.Home),
@@ -52,16 +60,16 @@ fun AppNavigation() {
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentRoute = navBackStackEntry?.destination?.route
-                items.forEach { item ->
-                    NavigationBarItem(
-                        selected = currentRoute == item.route,
-                        onClick = { navController.navigateToTab(item.route) },
-                        icon = { Icon(item.icon, contentDescription = item.label) },
-                        label = { Text(item.label) }
-                    )
+            if (currentRoute in tabRoutes) {
+                NavigationBar {
+                    items.forEach { item ->
+                        NavigationBarItem(
+                            selected = currentRoute == item.route,
+                            onClick = { navController.navigateToTab(item.route) },
+                            icon = { Icon(item.icon, contentDescription = item.label) },
+                            label = { Text(item.label) }
+                        )
+                    }
                 }
             }
         }
@@ -81,7 +89,14 @@ fun AppNavigation() {
             composable(Routes.TODO) { TodoScreen() }
             composable(Routes.FOCUS) { FocusScreen() }
             composable(Routes.TIMETABLE) { TimetableScreen() }
-            composable(Routes.PROFILE) { ProfileScreen() }
+            composable(Routes.PROFILE) {
+                ProfileScreen(
+                    onNavigateSemester = { navController.navigate(Routes.SEMESTER) }
+                )
+            }
+            composable(Routes.SEMESTER) {
+                SemesterScreen(onBack = { navController.popBackStack() })
+            }
         }
     }
 }

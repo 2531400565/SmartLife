@@ -6,8 +6,10 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.smartlife.app.data.repository.SettingsRepository
 import com.smartlife.app.di.ServiceLocator
 import com.smartlife.app.util.DateUtils
+import com.smartlife.app.util.WeekUtils
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -38,6 +40,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     private val courseRepository = ServiceLocator.courseRepository(application)
     private val focusRepository = ServiceLocator.focusSessionRepository(application)
     private val quoteRepository = ServiceLocator.quoteRepository(application)
+    private val context = application.applicationContext
 
     /** 随机励志语（单独维护，进入页面与点击刷新时更新）。 */
     private val quote = MutableStateFlow<String?>(null)
@@ -45,14 +48,26 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
     /** 聚合后的首页状态。 */
     val uiState: StateFlow<DashboardUiState> = combine(
         taskRepository.todayTodoCount(),
-        courseRepository.todayCourseCount(),
+        courseRepository.allCourses,
+        SettingsRepository.semesterStartDate(context),
         focusRepository.todayFocusSeconds(),
         quote
-    ) { todo, course, seconds, q ->
+    ) { todo, courses, semesterStart, seconds, q ->
+        // 今日课程数：当前星期 + 当前单双周（按学期设置动态计算）
+        val now = System.currentTimeMillis()
+        val day = DateUtils.todayDayOfWeek()
+        val weekNumber = if (WeekUtils.isNotStarted(now, semesterStart)) {
+            null
+        } else {
+            WeekUtils.weekNumber(now, semesterStart)
+        }
+        val todayCourseCount = courses.count {
+            it.weekdays.contains(day) && WeekUtils.isActive(it.weekType, weekNumber)
+        }
         DashboardUiState(
             dateText = DateUtils.todayText(),
             todayTodoCount = todo,
-            todayCourseCount = course,
+            todayCourseCount = todayCourseCount,
             todayFocusSeconds = seconds,
             todayFocusText = formatDuration(seconds),
             quoteText = q ?: "",

@@ -8,6 +8,7 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.smartlife.app.data.local.WeekType
 import com.smartlife.app.data.local.entity.CourseEntity
+import com.smartlife.app.data.repository.SettingsRepository
 import com.smartlife.app.di.ServiceLocator
 import com.smartlife.app.util.DateUtils
 import com.smartlife.app.util.WeekUtils
@@ -28,7 +29,14 @@ data class TimetableUiState(
     val showEditor: Boolean = false,                   // 是否显示 新增/编辑 对话框
     val editingCourse: CourseEntity? = null,           // 编辑中的课程（null 表示新增）
     val pendingDeleteCourse: CourseEntity? = null,     // 待删除确认的课程
-    val loading: Boolean = true
+    val loading: Boolean = true,
+    // 学期周信息（由 semesterStartDate 动态计算）
+    val semesterStartDate: Long? = null,   // 学期开始日期
+    val isNotStarted: Boolean = true,      // 是否未开学
+    val weekNumber: Int? = null,           // 当前周数（未开学为 null）
+    val weekType: WeekType? = null,        // 当前单双周（未开学为 null）
+    val weekStart: Long? = null,           // 当前周开始日期
+    val weekEnd: Long? = null              // 当前周结束日期
 )
 
 /**
@@ -38,22 +46,36 @@ data class TimetableUiState(
 class TimetableViewModel(application: Application) : AndroidViewModel(application) {
 
     private val courseRepository = ServiceLocator.courseRepository(application)
+    private val context = application.applicationContext
 
     private val _uiState = MutableStateFlow(TimetableUiState())
 
     /**
      * 显示列表 = 全部课程（Room Flow，变更即刷新）
+     * × 学期开始日期（DataStore，变更即刷新）
      * 按选中星期（weekdays 集合包含） + 当前单双周过滤，再按开始时间升序。
      */
     val uiState: StateFlow<TimetableUiState> = combine(
         courseRepository.allCourses,
+        SettingsRepository.semesterStartDate(context),
         _uiState
-    ) { courses, state ->
-        val weekNumber = WeekUtils.weekNumber(System.currentTimeMillis())
+    ) { courses, semesterStart, state ->
+        val now = System.currentTimeMillis()
+        val notStarted = WeekUtils.isNotStarted(now, semesterStart)
+        val weekNumber = if (notStarted) null else WeekUtils.weekNumber(now, semesterStart)
         val dayCourses = courses
             .filter { it.weekdays.contains(state.selectedDay) && WeekUtils.isActive(it.weekType, weekNumber) }
             .sortedBy { it.startMinute }
-        state.copy(courses = dayCourses, loading = false)
+        state.copy(
+            courses = dayCourses,
+            loading = false,
+            semesterStartDate = semesterStart,
+            isNotStarted = notStarted,
+            weekNumber = weekNumber,
+            weekType = if (notStarted) null else WeekUtils.weekType(weekNumber!!),
+            weekStart = WeekUtils.weekStart(now, semesterStart),
+            weekEnd = WeekUtils.weekEnd(now, semesterStart)
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
