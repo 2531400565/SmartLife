@@ -1,5 +1,12 @@
 # SmartLife · 大学生活助手
 
+![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
+![Platform](https://img.shields.io/badge/Platform-Android-brightgreen.svg)
+![Min SDK](https://img.shields.io/badge/Min%20SDK-24-blue.svg)
+![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-orange.svg)
+
+> 当前版本：**v1.0** · 完全离线 · 无广告 · 无账号 · 数据全部本地存储
+
 一款完全离线的 Android 大学生活管理应用：待办清单、番茄专注、课程表与考试倒计时，所有数据本地存储，无需联网、无广告、无账号。
 
 ## 功能列表
@@ -80,7 +87,7 @@ SmartLife/
 ## APK 输出位置
 
 - Debug：`app/build/outputs/apk/debug/app-debug.apk`
-- Release：`app/build/outputs/apk/release/app-release.apk`
+- Release（未签名）：`app/build/outputs/apk/release/app-release-unsigned.apk`
 
 ## 数据备份 / 恢复
 
