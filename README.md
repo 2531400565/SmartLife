@@ -5,17 +5,45 @@
 ![Min SDK](https://img.shields.io/badge/Min%20SDK-24-blue.svg)
 ![Kotlin](https://img.shields.io/badge/Kotlin-2.0.21-orange.svg)
 
-> 当前版本：**v1.0** · 完全离线 · 无广告 · 无账号 · 数据全部本地存储
+> 基于 Kotlin + Jetpack Compose 开发的 Android 大学生效率工具，集成待办、番茄专注、单双周课表、学期设置、数据导入导出等功能。
 
-一款完全离线的 Android 大学生活管理应用：待办清单、番茄专注、课程表与考试倒计时，所有数据本地存储，无需联网、无广告、无账号。
+完全离线运行，无广告、无账号，所有数据本地存储，保护隐私。
 
-## 功能列表
+---
 
-- **首页 Dashboard**：今日日期、今日待办数量、今日课程数量、今日专注时长、随机励志语（点按换一条）
-- **待办 Todo**：新增 / 编辑 / 删除（长按确认）、完成勾选（删除线）、三级优先级、截止日期、实时搜索、未完成置顶
-- **专注番茄钟 Focus**：25 / 45 / 60 分钟、开始 / 暂停 / 继续 / 结束、圆形倒计时动画、MM:SS 实时显示、完成后自动入库、WorkManager 本地通知提醒、今日累计统计、退出页面计时不中断
-- **课程表 Timetable**：周一至周日切换（默认今天）、当天课程列表、任课老师 / 教室 / 时间、考试倒计时（今天考试 / 距考试 X 天）、课程增删改
-- **我的 Profile**：数据统计（总待办 / 已完成 / 总专注时长 / 完成轮数 / 课程总数）、JSON 一键导出（系统分享）与导入恢复（事务回滚、非法 JSON 拒绝）、主题切换（跟随系统 / 浅色 / 深色）、关于
+## 功能展示
+
+### 🏠 Dashboard 首页
+
+今日日期、随机励志语（点按换一条），以及「今日待办 / 今日课程 / 今日专注」三张统计卡片——卡片可点击直达对应模块。
+
+![首页](./screenshots/home.png)
+
+### ✅ Todo 待办
+
+新增 / 编辑 / 删除（长按确认）、完成勾选、三级优先级、**截止日期 + 时间**（精确到分钟）、实时搜索、逾期提示（已逾期 X 小时）。
+
+![待办](./screenshots/todo.png)
+
+### 🍅 Focus 番茄钟
+
+预设 15 / 25 / 45 / 60 分钟 + 自定义（5~180 分钟）；开始 / 暂停 / 继续 / 结束；圆形倒计时动画；退出页面计时不中断；结束经 WorkManager 本地通知提醒。
+
+![专注](./screenshots/focus.png)
+
+### 📚 Timetable 课表
+
+周一至周日切换、**多星期课程**、**单双周（每周 / 单周 / 双周）**、**学期设置**（自定义开学日期，自动计算当前周数与单双周）、考试倒计时、任课老师 / 教室 / 时间。
+
+![课表](./screenshots/timetable.png)
+
+### 👤 Profile 我的
+
+数据统计（总待办 / 已完成 / 总专注时长 / 完成轮数）、**当前学期课程**入口、主题切换（跟随系统 / 浅色 / 深色）、JSON 一键导入导出、学期设置、关于。
+
+> 截图由真实设备 / 模拟器补充后替换 `screenshots/` 下同名文件即可。
+
+---
 
 ## 技术栈
 
@@ -24,13 +52,15 @@
 | 语言 | Kotlin |
 | UI | Jetpack Compose + Material 3（深色模式自适应） |
 | 架构 | MVVM（ViewModel + StateFlow + Repository） |
-| 本地数据库 | Room（含 v1→v2 自动 Migration，无破坏性迁移） |
-| 导航 | Navigation Compose（底部五 Tab） |
+| 本地数据库 | Room（自动 Migration，无破坏性迁移） |
+| 导航 | Navigation Compose（底部五 Tab + 二级页面） |
+| 偏好持久化 | DataStore Preferences（主题模式、学期设置） |
 | 后台任务 | WorkManager（专注结束本地通知） |
-| 偏好持久化 | DataStore Preferences（主题模式） |
 | 数据备份 | JSON（Android 内置 org.json，完全离线） |
 
-## 项目目录结构
+---
+
+## 项目结构
 
 ```
 SmartLife/
@@ -42,62 +72,96 @@ SmartLife/
 │       │   ├── MainActivity.kt            # 入口，主题模式应用
 │       │   ├── SmartLifeApplication.kt
 │       │   ├── data/
-│       │   │   ├── local/                 # Room：entity / dao / AppDatabase(+Migration)
-│       │   │   └── repository/            # Task/Course/FocusSession/Quote/Settings Repository
+│       │   │   ├── local/                 # Room：entity / dao / AppDatabase(+Migration) / Converters
+│       │   │   │   ├── entity/            # Task / Course / FocusSession / Quote
+│       │   │   │   └── dao/               # TaskDao / CourseDao / FocusSessionDao / QuoteDao / BackupDao
+│       │   │   └── repository/            # Task / Course / FocusSession / Quote / Settings
 │       │   ├── di/ServiceLocator.kt       # 轻量服务定位
 │       │   ├── ui/
-│       │   │   ├── navigation/            # Routes + NavGraph（五 Tab）
-│       │   │   ├── screen/                # dashboard / todo / focus / timetable / profile
+│       │   │   ├── components/            # DateField / TimeField（统一日期时间组件）
+│       │   │   ├── navigation/            # Routes + NavGraph
+│       │   │   ├── screen/                # dashboard / todo / focus / timetable / profile / semester
 │       │   │   └── theme/                 # Color / Theme / Type / Shape / ThemeMode
-│       │   ├── util/                      # DateUtils / JsonBackup
+│       │   ├── util/                      # DateUtils / WeekUtils / JsonBackup
 │       │   └── worker/                    # FocusReminderWorker（通知）
 │       └── res/                           # 资源与图标
+├── screenshots/                           # 界面截图（占位）
 ├── build.gradle.kts / settings.gradle.kts / gradle.properties
 └── gradle/wrapper/                        # Gradle Wrapper 8.9
 ```
 
+---
+
+## 架构图
+
+```
+              ┌─────────────────────┐
+              │   Compose UI        │   (Screen)
+              └──────────┬──────────┘
+                         ↓ 状态订阅 / 事件
+              ┌──────────┴──────────┐
+              │   ViewModel         │   (StateFlow + viewModelScope)
+              └──────────┬──────────┘
+                         ↓ 数据流 / 写操作
+              ┌──────────┴──────────┐
+              │   Repository        │
+              └──────────┬──────────┘
+                         ↓
+        ┌────────────────┴────────────────┐
+        │                                 │
+   ┌────┴─────┐                     ┌─────┴──────┐
+   │   Room   │                     │  DataStore │
+   │ (SQLite) │                     │(Preferences)│
+   └──────────┘                     └────────────┘
+```
+
+- **UI 层**：Compose 声明式界面，订阅 ViewModel 暴露的 StateFlow。
+- **ViewModel 层**：持有业务状态，响应 UI 事件，调用 Repository。
+- **Repository 层**：封装数据来源，Room 返回 Flow 实现响应式更新。
+- **数据层**：Room 存业务数据（待办/课程/专注/励志语），DataStore 存全局偏好（主题、学期）。
+
+---
+
 ## 环境要求
 
+- **Android Studio**（新版即可，自带 JDK）
 - **最低 Android 版本**：Android 7.0（API 24，minSdk 24）
-- 目标 / 编译 SDK：34
-- JDK 17、Gradle 8.9（Wrapper 已内置）、AGP 8.7.0
+- **目标 / 编译 SDK**：34
+- **JDK**：17
+- **Gradle**：8.9（Wrapper 已内置）；AGP 8.7.0；Kotlin 2.0.21
 
-## 如何打开
+---
 
-1. 安装 **Android Studio**（新版即可，自带 JDK）；
+## 如何运行
+
+1. 安装 **Android Studio**；
 2. `File → Open` 选择本目录 `SmartLife/`；
-3. 首次同步会自动下载依赖（需联网），等待 Gradle Sync 完成；
+3. 等待 Gradle Sync 完成（首次需联网下载依赖）；
 4. 点击 **Run ▶** 选择模拟器或真机运行。
 
 ## 如何构建 APK
 
-命令行（项目根目录）或 Android Studio 的 Build 菜单：
-
 ```bash
-# 清理并构建 Debug APK
-./gradlew clean
+# Debug APK
 ./gradlew assembleDebug
+# 产物：app/build/outputs/apk/debug/app-debug.apk
 
-# 构建 Release APK
+# Release APK（默认调试签名，便于直接安装）
 ./gradlew assembleRelease
+# 产物：app/build/outputs/apk/release/app-release-unsigned.apk
 ```
 
-> Release 构建默认使用调试签名（`isMinifyEnabled = false`），便于直接安装；如需上架，请在 `app/build.gradle.kts` 配置正式签名。
-
-## APK 输出位置
-
-- Debug：`app/build/outputs/apk/debug/app-debug.apk`
-- Release（未签名）：`app/build/outputs/apk/release/app-release-unsigned.apk`
+---
 
 ## 数据备份 / 恢复
 
-- **导出**：「我的」→「数据管理」→「导出 JSON」→ 通过系统分享保存到任意位置；
+- **导出**：「我的」→「数据管理」→「导出 JSON」→ 系统分享保存；
 - **导入**：「导入 JSON」→ 选择备份文件；
-- 备份内容：待办、课程、专注记录、励志语（version 1 格式）；
-- 安全机制：导入前完整校验 JSON；校验通过后在**单个事务**内完成替换，失败自动回滚，不会产生半套数据或破坏现有数据；非法 / 版本不符的文件会被拒绝。
+- 备份内容：待办、课程、专注记录、励志语；
+- 安全机制：导入前完整校验 JSON，校验通过后在**单个事务**内替换，失败自动回滚，非法 / 版本不符的文件被拒绝。
+
+---
 
 ## License
 
-MIT License —— 详见 [LICENSE](LICENSE)。
-
-Copyright © 2026 SmartLife
+[MIT License](./LICENSE) · Copyright © 2026 SmartLife
