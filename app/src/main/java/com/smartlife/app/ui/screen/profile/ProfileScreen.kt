@@ -95,10 +95,10 @@ fun ProfileScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 24.dp),
+                .padding(horizontal = 20.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(text = "我的", style = MaterialTheme.typography.titleLarge)
+            Text(text = "我的", style = MaterialTheme.typography.headlineSmall)
 
             // ===== 关于头部 =====
             HeaderCard(versionName = rememberVersionName())

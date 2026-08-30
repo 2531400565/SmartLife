@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -83,8 +84,8 @@ fun TimetableScreen(
             // ===== 标题 =====
             Text(
                 text = "课表",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(top = 20.dp, bottom = 12.dp)
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(top = 20.dp, bottom = 14.dp)
             )
 
             // ===== 横向星期选择栏（默认选中今天）=====
@@ -105,7 +106,8 @@ fun TimetableScreen(
                 uiState.courses.isEmpty() -> EmptyDayState()
                 else -> LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(bottom = 96.dp)
                 ) {
                     items(uiState.courses, key = { it.id }) { course ->
                         CourseCard(
@@ -310,9 +312,9 @@ private fun EmptyDayState() {
                 tint = MaterialTheme.colorScheme.primary
             )
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
         Text(text = "今天没有课", style = MaterialTheme.typography.titleMedium)
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "点按右下角 + 添加课程，好好享受空闲时光",
             style = MaterialTheme.typography.bodyMedium,

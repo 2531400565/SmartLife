@@ -66,10 +66,31 @@ object DateUtils {
         }
     }
 
-    /** 本地"当天零点" → UTC 零点（Material3 DatePicker 的 initialSelectedDateMillis 使用）。 */
+    /**
+     * 任务是否逾期：未完成 + 有截止日期 + 截止日早于今天。
+     *
+     * 截止日期统一存为"当天 23:59:59"，与"今天 00:00"比较即可得到正确结果：
+     * - 昨天及更早 → 逾期
+     * - 今天 → 不逾期（同一天内）
+     * - 明天及更晚 → 不逾期
+     * - 已完成 → 无论日期如何都不算逾期
+     */
+    fun isOverdue(dueDate: Long?, isCompleted: Boolean): Boolean =
+        !isCompleted && dueDate != null && dueDate < startOfToday()
+
+    /**
+     * 本地"当天零点" → Material3 DatePicker 使用的 UTC 当天零点。
+     *
+     * epoch 毫秒是全球统一时间轴，不能按"UTC 比本地慢"直觉做减法：
+     *   本地零点这一瞬间 = UTC 零点 - 时区偏移
+     * 因此要得到"UTC 日历上同一天"的零点，必须 **加上** 时区偏移。
+     *
+     * 早期实现误用减法，导致编辑任务/课程回显时日期整体偏移一天，
+     * 并使"今天截止"的任务被误判为逾期。此方向已由 JVM 校验脚本覆盖。
+     */
     fun toUtcStartOfDay(timestamp: Long): Long {
         val localStart = startOfDay(timestamp)
-        return localStart - TimeZone.getDefault().getOffset(localStart)
+        return localStart + TimeZone.getDefault().getOffset(localStart)
     }
 
     /** DatePicker 选中的 UTC 日期 → 本地当天 23:59:59（作为任务截止时刻）。 */

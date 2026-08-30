@@ -78,10 +78,16 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
 
     // ===== 时长选择（仅空闲时）=====
 
+    /**
+     * 选择专注时长（预设或自定义均走这里）。
+     * 统一做范围钳制：即便外部传入 0 / 负数 / 超大值，也会被限制在
+     * [MIN_DURATION_MINUTES, MAX_DURATION_MINUTES] 内，保证倒计时与 FocusSession 记录始终合理。
+     */
     fun selectDuration(minutes: Int) {
         if (_uiState.value.phase != FocusPhase.IDLE) return
+        val safeMinutes = minutes.coerceIn(MIN_DURATION_MINUTES, MAX_DURATION_MINUTES)
         _uiState.update {
-            it.copy(plannedMinutes = minutes, remainingSeconds = minutes * 60)
+            it.copy(plannedMinutes = safeMinutes, remainingSeconds = safeMinutes * 60)
         }
     }
 
@@ -214,6 +220,16 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
 
     companion object {
         private const val REMINDER_TAG = "focus_reminder"
+
+        /**
+         * 专注时长允许范围（分钟）。预设值与自定义输入统一受此约束：
+         * 禁止 0、负数，上限 180 分钟，避免过长倒计时与异常统计。
+         */
+        const val MIN_DURATION_MINUTES = 5
+        const val MAX_DURATION_MINUTES = 180
+
+        /** 预设时长（分钟），UI 与自定义共用同一套选择逻辑。 */
+        val PRESET_MINUTES = listOf(15, 25, 45, 60)
 
         /** ViewModel 工厂（AndroidViewModel 需要 Application）。 */
         val Factory: ViewModelProvider.Factory = viewModelFactory {

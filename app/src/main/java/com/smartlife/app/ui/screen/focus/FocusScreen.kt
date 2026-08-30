@@ -12,6 +12,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,19 +22,24 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -41,6 +48,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,7 +60,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
  * 专注页：时长切换 + 圆形倒计时动画 + 开始/暂停/继续/结束 + 今日统计。
  * 计时由 ViewModel 的绝对时间戳驱动，退出页面不中断；结束提醒由 WorkManager 保证。
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun FocusScreen(
     viewModel: FocusViewModel = viewModel(factory = FocusViewModel.Factory)
@@ -62,6 +70,7 @@ fun FocusScreen(
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { /* 结果无需处理：未授权仅影响通知展示 */ }
+    var showCustomDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -72,7 +81,7 @@ fun FocusScreen(
     ) {
         Text(
             text = "专注",
-            style = MaterialTheme.typography.titleLarge,
+            style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -97,19 +106,29 @@ fun FocusScreen(
 
         Spacer(modifier = Modifier.height(28.dp))
 
-        // ===== 时长选择（仅空闲可切换）=====
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            val durations = listOf(25, 45, 60)
-            durations.forEachIndexed { index, minutes ->
-                SegmentedButton(
-                    selected = uiState.plannedMinutes == minutes,
+        // ===== 时长选择（仅空闲可切换）：预设 15/25/45/60 + 自定义 =====
+        val presets = FocusViewModel.PRESET_MINUTES
+        val isCustom = uiState.plannedMinutes !in presets
+        FlowRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            maxItemsInEachRow = 4
+        ) {
+            presets.forEach { minutes ->
+                FilterChip(
+                    selected = !isCustom && uiState.plannedMinutes == minutes,
                     onClick = { viewModel.selectDuration(minutes) },
                     enabled = uiState.phase == FocusPhase.IDLE,
-                    shape = SegmentedButtonDefaults.itemShape(index, durations.size)
-                ) {
-                    Text("$minutes 分")
-                }
+                    label = { Text("$minutes 分") }
+                )
             }
+            FilterChip(
+                selected = isCustom,
+                onClick = { showCustomDialog = true },
+                enabled = uiState.phase == FocusPhase.IDLE,
+                label = { Text(if (isCustom) "自定义 ${uiState.plannedMinutes} 分" else "自定义") }
+            )
         }
 
         Spacer(modifier = Modifier.height(36.dp))
@@ -148,6 +167,72 @@ fun FocusScreen(
             }
         }
     }
+
+    // ===== 自定义时长对话框（确定后立即生效，可直接开始专注）=====
+    if (showCustomDialog) {
+        CustomDurationDialog(
+            initialMinutes = uiState.plannedMinutes,
+            onDismiss = { showCustomDialog = false },
+            onConfirm = { minutes ->
+                viewModel.selectDuration(minutes)
+                showCustomDialog = false
+            }
+        )
+    }
+}
+
+/**
+ * 自定义专注时长输入对话框。
+ * 仅接受数字输入，允许范围 5~180 分钟；非法值（0 / 负数 / 超过 180）时"确定"按钮禁用并给出提示。
+ */
+@Composable
+private fun CustomDurationDialog(
+    initialMinutes: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (Int) -> Unit
+) {
+    var text by remember { mutableStateOf(initialMinutes.toString()) }
+    val parsed = text.trim().toIntOrNull()
+    val isValid = parsed != null &&
+        parsed in FocusViewModel.MIN_DURATION_MINUTES..FocusViewModel.MAX_DURATION_MINUTES
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("自定义专注时长") },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { input ->
+                    // 仅允许纯数字，最多 3 位（上限 180）
+                    if (input.isEmpty() || (input.all { it.isDigit() } && input.length <= 3)) {
+                        text = input
+                    }
+                },
+                label = { Text("分钟数") },
+                suffix = { Text("分钟") },
+                placeholder = { Text("例如 30") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                isError = text.isNotEmpty() && !isValid,
+                supportingText = {
+                    Text(
+                        text = "可设置 ${FocusViewModel.MIN_DURATION_MINUTES}～" +
+                            "${FocusViewModel.MAX_DURATION_MINUTES} 分钟"
+                    )
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { if (isValid) onConfirm(parsed!!) },
+                enabled = isValid
+            ) { Text("确定") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("取消") }
+        }
+    )
 }
 
 /** 圆形倒计时：底环 + 剩余进度弧（平滑动画）+ 中心 MM:SS 与状态文字。 */

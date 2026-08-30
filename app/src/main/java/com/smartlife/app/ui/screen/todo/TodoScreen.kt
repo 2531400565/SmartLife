@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -35,6 +36,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -77,8 +79,8 @@ fun TodoScreen(
             // ===== 标题 =====
             Text(
                 text = "待办",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.padding(top = 20.dp, bottom = 12.dp)
+                style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.padding(top = 20.dp, bottom = 14.dp)
             )
 
             // ===== 搜索框（实时过滤）=====
@@ -111,7 +113,8 @@ fun TodoScreen(
                 uiState.tasks.isEmpty() -> EmptyState()
                 else -> LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(bottom = 96.dp)
                 ) {
                     items(uiState.tasks, key = { it.id }) { task ->
                         TaskItem(
@@ -163,9 +166,8 @@ private fun TaskItem(
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
-    // 未完成且已过今天 00:00 → 逾期
-    val isOverdue = !task.isCompleted && task.dueDate != null &&
-        task.dueDate < DateUtils.startOfToday()
+    // 未完成 + 截止日早于今天 → 逾期（判定统一收在 DateUtils，便于复现验证）
+    val isOverdue = DateUtils.isOverdue(task.dueDate, task.isCompleted)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -211,6 +213,7 @@ private fun TaskItem(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     PriorityLabel(task.priority)
+                    if (isOverdue) OverdueChip()
                     task.dueDate?.let { ts ->
                         Text(
                             text = DateUtils.dueDateText(ts),
@@ -245,6 +248,25 @@ private fun PriorityLabel(priority: Priority) {
     }
 }
 
+/**
+ * 逾期标识：使用 errorContainer / onErrorContainer 配对，
+ * 浅色与深色模式下均由 Material3 保证文字与底色对比度，不会看不清。
+ */
+@Composable
+private fun OverdueChip() {
+    Surface(
+        shape = MaterialTheme.shapes.small,
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer
+    ) {
+        Text(
+            text = "已逾期",
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+        )
+    }
+}
+
 /** 空状态：无任务（或搜索无结果）时的插画式提示。 */
 @Composable
 private fun EmptyState() {
@@ -266,9 +288,9 @@ private fun EmptyState() {
                 tint = MaterialTheme.colorScheme.primary
             )
         }
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(20.dp))
         Text(text = "暂无待办任务", style = MaterialTheme.typography.titleMedium)
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "点击右下角 + 新建你的第一个任务",
             style = MaterialTheme.typography.bodyMedium,
