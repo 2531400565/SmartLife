@@ -2,12 +2,21 @@
 
 package com.smartlife.app.ui.screen.timetable
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
@@ -17,12 +26,16 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.School
@@ -32,13 +45,20 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -49,6 +69,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.smartlife.app.ui.theme.AnimSpec
 import com.smartlife.app.data.local.WeekType
 import com.smartlife.app.data.local.entity.CourseEntity
 import com.smartlife.app.util.DateUtils
@@ -68,6 +89,9 @@ fun TimetableScreen(
     viewModel: TimetableViewModel = viewModel(factory = TimetableViewModel.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // 视图模式（v1.3 P5）：列表（默认）/ 时间轴
+    var viewMode by rememberSaveable { mutableStateOf(TimetableViewMode.LIST) }
 
     Scaffold(
         floatingActionButton = {
@@ -134,26 +158,89 @@ fun TimetableScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // ===== 内容区 =====
-            when {
-                uiState.loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+            // ===== 视图模式切换（v1.3 P5：列表 / 时间轴）=====
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                TimetableViewMode.entries.forEachIndexed { index, mode ->
+                    SegmentedButton(
+                        selected = viewMode == mode,
+                        onClick = { viewMode = mode },
+                        shape = SegmentedButtonDefaults.itemShape(index, TimetableViewMode.entries.size)
+                    ) {
+                        Text(mode.label)
                     }
                 }
-                uiState.courses.isEmpty() -> EmptyDayState()
-                else -> LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    contentPadding = PaddingValues(bottom = 96.dp)
-                ) {
-                    items(uiState.courses, key = { it.id }) { course ->
-                        CourseCard(
-                            course = course,
-                            color = COURSE_COLORS[((course.id - 1) % COURSE_COLORS.size).toInt().coerceAtLeast(0)],
-                            onClick = { viewModel.showEditDialog(course) },
-                            onLongClick = { viewModel.requestDelete(course) }
-                        )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // ===== 内容区 =====
+            // 外层：视图模式切换淡入淡出（v1.3 P5，200ms）
+            AnimatedContent(
+                targetState = viewMode,
+                transitionSpec = {
+                    fadeIn(tween(AnimSpec.ShortMs, easing = AnimSpec.standard)) togetherWith fadeOut(tween(AnimSpec.ShortMs, easing = AnimSpec.standard))
+                },
+                label = "viewModeSwitch"
+            ) { mode ->
+                when (mode) {
+                    TimetableViewMode.LIST -> {
+                        // 内层：列表模式，切换星期时左右滑动（v1.3 P2，250ms）
+                        AnimatedContent(
+                            targetState = uiState.selectedDay,
+                            transitionSpec = {
+                                // 星期数变大 → 新内容自右侧滑入；变小 → 自左侧滑入
+                                val direction = if (targetState > initialState) 1 else -1
+                                (slideInHorizontally(tween(AnimSpec.MediumMs, easing = AnimSpec.standard)) { it * direction } +
+                                    fadeIn(tween(AnimSpec.MediumMs, easing = AnimSpec.standard))) togetherWith
+                                    (slideOutHorizontally(tween(AnimSpec.MediumMs, easing = AnimSpec.standard)) { -it * direction } +
+                                        fadeOut(tween(AnimSpec.MediumMs, easing = AnimSpec.standard)))
+                            },
+                            label = "daySwitchSlide"
+                        ) { _ ->
+                            when {
+                                uiState.loading -> {
+                                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                        CircularProgressIndicator()
+                                    }
+                                }
+                                uiState.courses.isEmpty() -> EmptyDayState()
+                                else -> LazyColumn(
+                                    modifier = Modifier.fillMaxSize(),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                    contentPadding = PaddingValues(bottom = 96.dp)
+                                ) {
+                                    items(uiState.courses, key = { it.id }) { course ->
+                                        // 课程卡出现淡入（v1.3 P2，250ms）
+                                        AnimatedVisibility(
+                                            visible = true,
+                                            enter = fadeIn(animationSpec = tween(durationMillis = AnimSpec.MediumMs, easing = AnimSpec.standard))
+                                        ) {
+                                            CourseCard(
+                                                course = course,
+                                                color = COURSE_COLORS[((course.id - 1) % COURSE_COLORS.size).toInt().coerceAtLeast(0)],
+                                                onClick = { viewModel.showEditDialog(course) },
+                                                onLongClick = { viewModel.requestDelete(course) }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    TimetableViewMode.TIMELINE -> {
+                        when {
+                            uiState.loading -> {
+                                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator()
+                                }
+                            }
+                            uiState.courses.isEmpty() -> EmptyDayState()
+                            else -> TimelineView(
+                                courses = uiState.courses,
+                                onCourseClick = viewModel::showEditDialog,
+                                onCourseLongClick = viewModel::requestDelete
+                            )
+                        }
                     }
                 }
             }
@@ -335,6 +422,189 @@ private fun CourseCard(
             }
         }
     }
+}
+
+/** 课表视图模式（v1.3 P5）：列表（默认）/ 时间轴。 */
+private enum class TimetableViewMode(val label: String) {
+    LIST("列表"),
+    TIMELINE("时间轴")
+}
+
+/**
+ * 时间轴视图（v1.3 P5，新增视图，不替换列表）：
+ * - 左侧显示第 1~12 节刻度（时间轴总跨度均分 12 段，仅作定位参考）；
+ * - 课程块按真实开始/结束分钟数绝对定位，高度 ∝ 时长（每分钟 1.5dp）；
+ * - 同时段课程自动分道并排显示，不重叠；
+ * - 点击课程编辑、长按删除。
+ * 不修改课程数据结构，完全使用已有 startMinute / endMinute。
+ */
+@Composable
+private fun TimelineView(
+    courses: List<CourseEntity>,
+    onCourseClick: (CourseEntity) -> Unit,
+    onCourseLongClick: (CourseEntity) -> Unit
+) {
+    val sorted = courses.sortedBy { it.startMinute }
+    if (sorted.isEmpty()) return
+
+    val ppm = 1.5.dp                       // 每分钟像素密度
+    val dayStart = (sorted.minOf { it.startMinute } / 60) * 60      // 向下取整到小时
+    val dayEnd = ((sorted.maxOf { it.endMinute } + 59) / 60) * 60   // 向上取整到小时
+    val totalMinutes = (dayEnd - dayStart).coerceAtLeast(60)
+    val totalHeight = ppm * totalMinutes
+    val lessonHeight = ppm * (totalMinutes / 12f)
+    val lanes = assignLanes(sorted)
+    val maxLanes = (lanes.values.maxOrNull() ?: 0) + 1
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(totalHeight)
+            .verticalScroll(rememberScrollState())
+    ) {
+        // ===== 左侧刻度：第 1~12 节 =====
+        Column(
+            modifier = Modifier
+                .width(58.dp)
+                .height(totalHeight)
+        ) {
+            (0 until 12).forEach { i ->
+                val rowStart = dayStart + (i * totalMinutes / 12f).toInt()
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(lessonHeight)
+                        .padding(horizontal = 4.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = "第${i + 1}节",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1
+                    )
+                    Text(
+                        text = DateUtils.formatMinute(rowStart),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
+                    )
+                }
+                if (i < 11) {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.width(8.dp))
+
+        // ===== 右侧画布：课程块按分钟绝对定位 =====
+        BoxWithConstraints(
+            modifier = Modifier
+                .weight(1f)
+                .height(totalHeight)
+        ) {
+            // 节次分隔参考线（弱化）
+            (0..12).forEach { i ->
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset(y = lessonHeight * i)
+                        .height(0.5.dp)
+                        .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f))
+                )
+            }
+
+            val laneWidth = maxWidth / maxLanes
+            sorted.forEach { course ->
+                val lane = lanes[course.id] ?: 0
+                val top = ppm * (course.startMinute - dayStart)
+                val height = (ppm * (course.endMinute - course.startMinute)).coerceAtLeast(28.dp)
+                TimelineCourseBlock(
+                    course = course,
+                    color = COURSE_COLORS[((course.id - 1) % COURSE_COLORS.size).toInt().coerceAtLeast(0)],
+                    modifier = Modifier
+                        .offset(x = laneWidth * lane + 2.dp, y = top)
+                        .width((laneWidth - 4.dp).coerceAtLeast(40.dp))
+                        .height(height),
+                    onClick = { onCourseClick(course) },
+                    onLongClick = { onCourseLongClick(course) }
+                )
+            }
+        }
+    }
+}
+
+/** 时间轴课程块：课程色点 + 名称 + 时间 + 教室，点击编辑、长按删除。 */
+@Composable
+private fun TimelineCourseBlock(
+    course: CourseEntity,
+    color: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(color.copy(alpha = 0.14f))
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            .padding(horizontal = 8.dp, vertical = 5.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(color)
+            )
+            Text(
+                text = course.name,
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                modifier = Modifier.weight(1f, fill = false)
+            )
+        }
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = "${DateUtils.formatMinute(course.startMinute)} - " +
+                DateUtils.formatMinute(course.endMinute),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1
+        )
+        if (!course.location.isNullOrBlank()) {
+            Text(
+                text = course.location,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+        }
+    }
+}
+
+/**
+ * 重叠课程分道：返回 课程id → 道号。
+ * 按开始时间依次放入「最后结束时间 ≤ 当前开始」的最早空闲道，否则新开一道。
+ */
+private fun assignLanes(courses: List<CourseEntity>): Map<Long, Int> {
+    val result = mutableMapOf<Long, Int>()
+    val laneEnds = mutableListOf<Int>()
+    for (c in courses.sortedBy { it.startMinute }) {
+        var lane = laneEnds.indexOfFirst { it <= c.startMinute }
+        if (lane == -1) {
+            lane = laneEnds.size
+            laneEnds.add(c.endMinute)
+        } else {
+            laneEnds[lane] = c.endMinute
+        }
+        result[c.id] = lane
+    }
+    return result
 }
 
 /** 空状态：当天没有课程。 */

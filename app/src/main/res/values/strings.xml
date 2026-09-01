@@ -1,3 +1,17 @@
 <resources>
     <string name="app_name">SmartLife</string>
+
+    <!-- ===== 桌面小组件 ===== -->
+    <string name="widget_label_todo">待办</string>
+    <string name="widget_label_course">课程</string>
+    <string name="widget_label_focus">专注</string>
+    <string name="widget_label_today_todo">今日待办</string>
+    <string name="widget_label_next_course">下一节</string>
+    <string name="widget_label_start_focus">开始专注</string>
+    <string name="widget_no_course">今天没课</string>
+    <string name="widget_label_small">SmartLife · 2×2</string>
+    <string name="widget_label_wide">SmartLife · 4×2</string>
+    <string name="widget_description_small">今日待办与下一节课程，点击直达首页。</string>
+    <string name="widget_description_wide">下一节课程、待办与专注一览，支持一键开始专注。</string>
+    <string name="widget_description">今日待办、课程与专注时长一览，点击可直达对应页面。</string>
 </resources>

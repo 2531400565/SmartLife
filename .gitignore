@@ -35,6 +35,7 @@ captures/
 # Keystore files
 *.jks
 *.keystore
+keystore.properties
 
 # Compose / Kotlin
 .kotlin/

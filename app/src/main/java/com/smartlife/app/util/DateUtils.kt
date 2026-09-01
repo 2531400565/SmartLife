@@ -33,14 +33,38 @@ object DateUtils {
         return cal.timeInMillis
     }
 
-    /**
-     * 今天是星期几（1=周一 ... 7=周日），与课表 dayOfWeek 约定一致。
-     * Calendar.DAY_OF_WEEK：SUNDAY=1 ... SATURDAY=7 → 转换为周一=1 ... 周日=7。
-     */
-    fun todayDayOfWeek(): Int {
-        val day = Calendar.getInstance().get(Calendar.DAY_OF_WEEK)
+    /** 本周（周一为第一天）的开始时刻 00:00。 */
+    fun startOfWeek(timestamp: Long): Long {
+        val dayStart = startOfDay(timestamp)
+        val weekday = dayOfWeek(timestamp)   // 1=周一 ... 7=周日
+        return dayStart - (weekday - 1) * 86_400_000L
+    }
+
+    /** 本月 1 号 00:00。 */
+    fun startOfMonth(timestamp: Long): Long {
+        val cal = Calendar.getInstance().apply {
+            timeInMillis = timestamp
+            set(Calendar.DAY_OF_MONTH, 1)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        return cal.timeInMillis
+    }
+
+    /** 某时间戳是星期几（1=周一 ... 7=周日），与课表 weekdays 约定一致。 */
+    fun dayOfWeek(timestamp: Long): Int {
+        val day = Calendar.getInstance().apply { timeInMillis = timestamp }
+            .get(Calendar.DAY_OF_WEEK)
         return (day + 5) % 7 + 1
     }
+
+    /**
+     * 今天是星期几（1=周一 ... 7=周日），与课表 weekdays 约定一致。
+     * Calendar.DAY_OF_WEEK：SUNDAY=1 ... SATURDAY=7 → 转换为周一=1 ... 周日=7。
+     */
+    fun todayDayOfWeek(): Int = dayOfWeek(System.currentTimeMillis())
 
     /** 今日日期文本，如 "2026年8月30日 周日"（首页展示用）。 */
     fun todayText(): String {
@@ -109,6 +133,12 @@ object DateUtils {
     fun minutesOfDay(timestamp: Long): Int {
         val cal = Calendar.getInstance().apply { timeInMillis = timestamp }
         return cal.get(Calendar.HOUR_OF_DAY) * 60 + cal.get(Calendar.MINUTE)
+    }
+
+    /** 取时间戳的小时数（0~23），供「分时段」逻辑判断使用（v1.3 P1）。 */
+    fun hourOfDay(timestamp: Long): Int {
+        val cal = Calendar.getInstance().apply { timeInMillis = timestamp }
+        return cal.get(Calendar.HOUR_OF_DAY)
     }
 
     /** 将「某天的日期」与「HH:mm 分钟数」合并为完整时间戳。 */

@@ -13,17 +13,45 @@ android {
         applicationId = "com.smartlife.app"
         minSdk = 24
         targetSdk = 34
-        versionCode = 2
-        versionName = "1.1"
+        versionCode = 3
+        versionName = "2.0.0"
 
         vectorDrawables {
             useSupportLibrary = true
         }
     }
 
+    // ===== Release 签名 =====
+    // 读取项目根目录的 keystore.properties（不入库）。
+    // 文件不存在时（如刚 clone 的仓库）回退为不签名，仍可正常 assembleRelease。
+    val keystorePropsFile = rootProject.file("keystore.properties")
+    // 逐行解析 key=value（跳过注释行），避免 java.util.Properties 的类型歧义
+    val keystoreProps: Map<String, String>? = if (keystorePropsFile.exists()) {
+        keystorePropsFile.readLines()
+            .filter { it.isNotBlank() && !it.trim().startsWith("#") && it.contains("=") }
+            .associate { line ->
+                val (k, v) = line.split("=", limit = 2)
+                k.trim() to v.trim()
+            }
+    } else {
+        null
+    }
+
+    signingConfigs {
+        if (keystoreProps != null) {
+            create("release") {
+                storeFile = file(keystoreProps.getValue("storeFile"))
+                storePassword = keystoreProps.getValue("storePassword")
+                keyAlias = keystoreProps.getValue("keyAlias")
+                keyPassword = keystoreProps.getValue("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

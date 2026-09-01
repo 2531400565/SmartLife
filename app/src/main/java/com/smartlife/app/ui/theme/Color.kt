@@ -12,6 +12,29 @@ val Success = Color(0xFF34C759)
 val Warning = Color(0xFFFF9F0A)
 val Danger = Color(0xFFFF3B30)
 
+// tertiary / error 调色板（基于语义色派生，供 M3 ColorScheme 接入）
+// —— 浅色方案 ——
+val Tertiary = Warning
+val OnTertiary = Color(0xFFFFFFFF)
+val TertiaryContainer = Color(0xFFFFE6CC)
+val OnTertiaryContainer = Color(0xFF5C3500)
+
+val Error = Danger
+val OnError = Color(0xFFFFFFFF)
+val ErrorContainer = Color(0xFFFFDAD6)
+val OnErrorContainer = Color(0xFF410E0B)
+
+// —— 深色方案 ——
+val DarkTertiary = Color(0xFFFFB24D)
+val DarkOnTertiary = Color(0xFF3D2400)
+val DarkTertiaryContainer = Color(0xFF5C3500)
+val DarkOnTertiaryContainer = Color(0xFFFFD8A8)
+
+val DarkError = Color(0xFFFF6B66)
+val DarkOnError = Color(0xFF410E0B)
+val DarkErrorContainer = Color(0xFF410E0B)
+val DarkOnErrorContainer = Color(0xFFFFDAD6)
+
 // ===== 浅色方案 =====
 val LightOnPrimary = Color(0xFFFFFFFF)
 val LightBackground = Color(0xFFF7F8FA)

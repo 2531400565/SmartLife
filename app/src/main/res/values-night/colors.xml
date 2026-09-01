@@ -1,0 +1,10 @@
+<resources>
+    <!-- ===== 桌面小组件配色（深色）=====
+         与 values/colors.xml 中的小组件颜色同名，深色模式下自动生效。 -->
+    <color name="widget_background">#1F2127</color>
+    <color name="widget_text_primary">#F2F2F2</color>
+    <color name="widget_text_secondary">#A8ADB7</color>
+    <color name="widget_divider">#33363D</color>
+    <color name="widget_accent">#6C93FF</color>
+    <color name="widget_text_on_accent">#FFFFFF</color>
+</resources>

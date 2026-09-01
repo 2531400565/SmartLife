@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  桌面小组件配置 · 2×2（v2.0 P2 重写）。
+  - minWidth/minHeight：兼容旧版启动器（2×2 网格）；
+  - targetCellWidth/Height：Android 12+ 的网格尺寸建议；
+  - updatePeriodMillis：系统最小刷新间隔为 30 分钟（1800000），
+    另外应用在前台时也会主动刷新，保证数据尽量实时。
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp"
+    android:minHeight="110dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="2"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/widget_smartlife"
+    android:previewLayout="@layout/widget_smartlife"
+    android:description="@string/widget_description_small"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen" />

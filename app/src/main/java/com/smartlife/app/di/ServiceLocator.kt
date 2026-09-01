@@ -27,7 +27,7 @@ object ServiceLocator {
         TaskRepository(appDatabase(context).taskDao())
 
     fun courseRepository(context: Context): CourseRepository =
-        CourseRepository(appDatabase(context).courseDao())
+        CourseRepository(appDatabase(context).courseDao(), context.applicationContext)
 
     fun focusSessionRepository(context: Context): FocusSessionRepository =
         FocusSessionRepository(appDatabase(context).focusSessionDao())

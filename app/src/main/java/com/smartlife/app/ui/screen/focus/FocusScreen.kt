@@ -36,6 +36,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,6 +56,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.smartlife.app.ui.theme.AnimSpec
 
 /**
  * 专注页：时长切换 + 圆形倒计时动画 + 开始/暂停/继续/结束 + 今日统计。
@@ -63,6 +65,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun FocusScreen(
+    /**
+     * 小组件「一键开始专注」触发序号（v2.0 P2，RC 修复）：大于 0 时进入页面自动开始。
+     *
+     * 用序号而非 Boolean：Boolean 在「第二次点击」时值没有变化，
+     * LaunchedEffect 不会重启，用户再点小组件按钮将毫无反应。
+     */
+    autoStartSeq: Int = 0,
     viewModel: FocusViewModel = viewModel(factory = FocusViewModel.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -71,6 +80,11 @@ fun FocusScreen(
         ActivityResultContracts.RequestPermission()
     ) { /* 结果无需处理：未授权仅影响通知展示 */ }
     var showCustomDialog by remember { mutableStateOf(false) }
+
+    // 小组件「一键开始专注」：仅空闲时自动开始，避免误重置进行中的会话
+    LaunchedEffect(autoStartSeq) {
+        if (autoStartSeq > 0) viewModel.startFromWidget()
+    }
 
     Column(
         modifier = Modifier
@@ -245,7 +259,7 @@ private fun TimerCircle(
     val progress = if (totalSeconds > 0) remainingSeconds.toFloat() / totalSeconds else 1f
     val animatedProgress by animateFloatAsState(
         targetValue = progress,
-        animationSpec = tween(durationMillis = 800),
+        animationSpec = tween(durationMillis = AnimSpec.FocusRingMs, easing = AnimSpec.standard),
         label = "countdownProgress"
     )
 

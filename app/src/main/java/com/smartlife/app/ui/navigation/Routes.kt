@@ -11,4 +11,7 @@ object Routes {
     const val PROFILE = "profile"
     const val SEMESTER = "semester"
     const val SEMESTER_COURSES = "semester_courses"
+    const val COURSE_REMINDER = "course_reminder"
+    const val EXAM_LIST = "exam_list"
+    const val ANALYTICS = "analytics"
 }

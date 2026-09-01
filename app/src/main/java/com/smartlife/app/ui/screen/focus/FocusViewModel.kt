@@ -105,6 +105,14 @@ class FocusViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /**
+     * 小组件「一键开始专注」入口（v2.0 P2）：
+     * 仅空闲时启动（默认 25 分钟），避免专注进行中/暂停时被误重置。
+     */
+    fun startFromWidget() {
+        if (_uiState.value.phase == FocusPhase.IDLE) start()
+    }
+
     // ===== 暂停 =====
 
     fun pause() {

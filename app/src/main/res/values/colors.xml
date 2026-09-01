@@ -1,4 +1,14 @@
 <resources>
     <color name="primary">#4F7FFF</color>
     <color name="ic_launcher_background">#4F7FFF</color>
+
+    <!-- ===== 桌面小组件配色（浅色）=====
+         说明：RemoteViews 在「应用 RemoteViews 的那一刻」按当前配置解析颜色，
+         因此深色模式由 values-night/colors.xml 提供同名资源自动切换。 -->
+    <color name="widget_background">#FFFFFF</color>
+    <color name="widget_text_primary">#1A1A1A</color>
+    <color name="widget_text_secondary">#6B6B6B</color>
+    <color name="widget_divider">#E6E6E6</color>
+    <color name="widget_accent">#4F7FFF</color>
+    <color name="widget_text_on_accent">#FFFFFF</color>
 </resources>

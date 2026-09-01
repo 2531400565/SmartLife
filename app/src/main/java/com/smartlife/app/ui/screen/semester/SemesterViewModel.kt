@@ -8,10 +8,13 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.smartlife.app.data.local.WeekType
 import com.smartlife.app.data.repository.SettingsRepository
+import com.smartlife.app.di.ServiceLocator
 import com.smartlife.app.util.DateUtils
 import com.smartlife.app.util.WeekUtils
+import com.smartlife.app.worker.CourseReminderScheduler
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -48,10 +51,22 @@ class SemesterViewModel(application: Application) : AndroidViewModel(application
             }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SemesterUiState())
 
-    /** 保存学期开始日期；传 null 表示清除设置。内部统一归一到当天 00:00。 */
+    /**
+     * 保存学期开始日期；传 null 表示清除设置。内部统一归一到当天 00:00。
+     * 学期开始日期决定单双周，变更后需重排课程提醒。
+     */
     fun setSemesterStartDate(date: Long?) {
         viewModelScope.launch {
             SettingsRepository.setSemesterStartDate(context, date?.let { DateUtils.startOfDay(it) })
+            rescheduleCourseReminders()
+        }
+    }
+
+    /** 重排课程提醒（周次变化会影响单双周课程的提醒时刻）。 */
+    private suspend fun rescheduleCourseReminders() {
+        runCatching {
+            val courses = ServiceLocator.appDatabase(context).courseDao().observeAll().first()
+            CourseReminderScheduler.rescheduleAll(context, courses)
         }
     }
 

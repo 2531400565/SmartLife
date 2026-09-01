@@ -2,6 +2,12 @@
 
 package com.smartlife.app.ui.screen.todo
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -40,9 +46,14 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -50,6 +61,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.smartlife.app.data.local.Priority
 import com.smartlife.app.data.local.entity.TaskEntity
+import com.smartlife.app.ui.theme.AnimSpec
 import com.smartlife.app.ui.theme.Success
 import com.smartlife.app.ui.theme.Warning
 import com.smartlife.app.util.DateUtils
@@ -62,6 +74,16 @@ fun TodoScreen(
     viewModel: TodoViewModel = viewModel(factory = TodoViewModel.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // 删除动画（v1.3 P2）：先把待删项标记为「离场」并播放缩放消失，动画结束后再执行真正的删除。
+    // 只影响表现层时序，删除动作本身仍走 ViewModel.confirmDelete()，不改动任何业务逻辑。
+    var deletingId by remember { mutableStateOf<Long?>(null) }
+    LaunchedEffect(deletingId) {
+        if (deletingId == null) return@LaunchedEffect
+        kotlinx.coroutines.delay(220)   // 略长于 200ms 的离场动画，保证动画完整播放
+        viewModel.confirmDelete()
+        deletingId = null
+    }
 
     Scaffold(
         floatingActionButton = {
@@ -110,19 +132,40 @@ fun TodoScreen(
                         CircularProgressIndicator()
                     }
                 }
-                uiState.tasks.isEmpty() -> EmptyState()
+                uiState.tasks.isEmpty() -> {
+                    // 空状态淡入（v1.3 P2，300ms）
+                    var emptyVisible by remember { mutableStateOf(false) }
+                    LaunchedEffect(Unit) { emptyVisible = true }
+                    AnimatedVisibility(
+                        visible = emptyVisible,
+                        enter = fadeIn(animationSpec = tween(durationMillis = AnimSpec.LongMs))
+                    ) {
+                        EmptyState()
+                    }
+                }
                 else -> LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     contentPadding = PaddingValues(bottom = 96.dp)
                 ) {
                     items(uiState.tasks, key = { it.id }) { task ->
-                        TaskItem(
-                            task = task,
-                            onToggle = { viewModel.toggleComplete(task) },
-                            onClick = { viewModel.showEditDialog(task) },
-                            onLongClick = { viewModel.requestDelete(task) }
-                        )
+                        // animateItem：列表重排（勾选后下移到已完成区）平滑过渡
+                        // AnimatedVisibility：删除时缩放消失（200ms）
+                        AnimatedVisibility(
+                            visible = deletingId != task.id,
+                            modifier = Modifier.animateItem(
+                                placementSpec = tween(durationMillis = AnimSpec.MediumMs)
+                            ),
+                            exit = fadeOut(animationSpec = tween(durationMillis = AnimSpec.ShortMs)) +
+                                scaleOut(targetScale = 0.7f, animationSpec = tween(durationMillis = AnimSpec.ShortMs))
+                        ) {
+                            TaskItem(
+                                task = task,
+                                onToggle = { viewModel.toggleComplete(task) },
+                                onClick = { viewModel.showEditDialog(task) },
+                                onLongClick = { viewModel.requestDelete(task) }
+                            )
+                        }
                     }
                 }
             }
@@ -147,7 +190,8 @@ fun TodoScreen(
             title = { Text("删除任务") },
             text = { Text("确定要删除「${task.title}」吗？此操作不可撤销。") },
             confirmButton = {
-                TextButton(onClick = viewModel::confirmDelete) {
+                // 先触发缩放消失动画，由 LaunchedEffect 在动画结束后调用 confirmDelete()
+                TextButton(onClick = { deletingId = task.id }) {
                     Text("删除", color = MaterialTheme.colorScheme.error)
                 }
             },
@@ -169,8 +213,18 @@ private fun TaskItem(
     // 未完成 + 截止时刻早于当前 → 逾期（精确到时分秒，判定统一收在 DateUtils）
     val isOverdue = DateUtils.isOverdue(task.dueDateTime, task.isCompleted)
 
+    // 勾选完成后「淡出」（v1.3 P2，250ms）：已完成任务降低不透明度，
+    // 配合 LazyColumn 的 animateItem 形成「淡出 + 下移」的观感。
+    val itemAlpha by animateFloatAsState(
+        targetValue = if (task.isCompleted) 0.6f else 1f,
+        animationSpec = tween(durationMillis = AnimSpec.MediumMs),
+        label = "taskAlpha"
+    )
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .graphicsLayer { alpha = itemAlpha },
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
