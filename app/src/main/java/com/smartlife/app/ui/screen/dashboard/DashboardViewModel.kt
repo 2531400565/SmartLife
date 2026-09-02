@@ -173,7 +173,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
             WeekUtils.weekNumber(now, semesterStart)
         }
         val todayCourseCount = courses.count {
-            it.weekdays.contains(day) && WeekUtils.isActive(it.weekType, weekNumber)
+            it.weekdays.contains(day) && WeekUtils.isActive(it.weekType, weekNumber, it.startWeek, it.endWeek)
         }
 
         DashboardUiState(
@@ -244,7 +244,7 @@ class DashboardViewModel(application: Application) : AndroidViewModel(applicatio
         val nowMinute = DateUtils.minutesOfDay(now)
 
         return courses
-            .filter { it.weekdays.contains(day) && WeekUtils.isActive(it.weekType, weekNumber) }
+            .filter { it.weekdays.contains(day) && WeekUtils.isActive(it.weekType, weekNumber, it.startWeek, it.endWeek) }
             .filter { it.startMinute > nowMinute }
             .minByOrNull { it.startMinute }
             ?.let { course ->

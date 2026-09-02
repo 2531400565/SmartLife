@@ -6,6 +6,7 @@ import androidx.room.TypeConverter
  * Room 类型转换器：用于 CourseEntity 的复合字段。
  * - weekdays(Set<Int>) ⇄ String（升序逗号分隔，如 "1,3,5"）
  * - weekType(WeekType) ⇄ String（枚举名，如 "EVERY"）
+ * - courseType(CourseType) ⇄ String（枚举名，如 "EXAM"）
  */
 class Converters {
 
@@ -30,4 +31,13 @@ class Converters {
     @TypeConverter
     fun toWeekType(value: String): WeekType =
         runCatching { WeekType.valueOf(value) }.getOrDefault(WeekType.EVERY)
+
+    /** CourseType → 枚举名。 */
+    @TypeConverter
+    fun fromCourseType(courseType: CourseType): String = courseType.name
+
+    /** 枚举名 → CourseType（未知值回退 UNKNOWN，避免旧/异常数据崩溃）。 */
+    @TypeConverter
+    fun toCourseType(value: String): CourseType =
+        runCatching { CourseType.valueOf(value) }.getOrDefault(CourseType.UNKNOWN)
 }

@@ -26,6 +26,7 @@ import kotlinx.coroutines.launch
  * v1：tasks / courses / focus_sessions / quotes 四张表。
  * v2：courses 表新增 teacher 列（可空），见 [MIGRATION_1_2]。
  * v3：tasks.dueDate → dueDateTime；courses.dayOfWeek → weekdays(Set) + 新增 weekType，见 [MIGRATION_2_3]。
+ * v4：courses 表新增 startWeek / endWeek / courseType 三列，见 [MIGRATION_3_4]。
  * 首次建库时自动写入 20 条内置励志语（见 [SeedCallback]）。
  */
 @Database(
@@ -35,7 +36,7 @@ import kotlinx.coroutines.launch
         FocusSessionEntity::class,
         QuoteEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -135,6 +136,21 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * v3 → v4：courses 表新增三列（可空/带默认值，不丢数据）。
+         * - startWeek INTEGER NOT NULL DEFAULT 1   （起始周次）
+         * - endWeek INTEGER NOT NULL DEFAULT 16    （结束周次）
+         * - courseType TEXT NOT NULL DEFAULT 'UNKNOWN'（课程性质）
+         * 旧课程自动按「第 1~16 周、未知性质」处理，行为与升级前完全一致。
+         */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `courses` ADD COLUMN `startWeek` INTEGER NOT NULL DEFAULT 1")
+                db.execSQL("ALTER TABLE `courses` ADD COLUMN `endWeek` INTEGER NOT NULL DEFAULT 16")
+                db.execSQL("ALTER TABLE `courses` ADD COLUMN `courseType` TEXT NOT NULL DEFAULT 'UNKNOWN'")
+            }
+        }
+
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
@@ -147,7 +163,7 @@ abstract class AppDatabase : RoomDatabase() {
                     DATABASE_NAME
                 )
                     .addCallback(SeedCallback)
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                     .build()
                     .also { INSTANCE = it }
             }

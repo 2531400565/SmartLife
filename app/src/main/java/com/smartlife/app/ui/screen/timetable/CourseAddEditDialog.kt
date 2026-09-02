@@ -20,11 +20,13 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.smartlife.app.data.local.CourseType
 import com.smartlife.app.data.local.WeekType
 import com.smartlife.app.data.local.entity.CourseEntity
 import com.smartlife.app.ui.components.DateField
@@ -36,10 +38,15 @@ private val WEEKDAYS = listOf(
     "周五" to 5, "周六" to 6, "周日" to 7
 )
 
+/** 周次范围：允许输入 1~30（覆盖绝大多数学期）。 */
+private const val WEEK_MIN = 1
+private const val WEEK_MAX = 30
+
 /**
  * 新增 / 编辑课程对话框。
  * 含：课程名称（必填）、教室（可选）、任课老师（可选）、星期（多选）、
- * 周次（每周/单周/双周）、开始/结束时间、考试日期（可选）。
+ * 周次（每周/单周/双周）、周次范围（起始周/结束周）、课程性质（考试课/考查课/未知）、
+ * 开始/结束时间、考试日期（可选）。
  *
  * 布局要点：内容区可垂直滚动，避免小屏或键盘弹出时底部内容被裁切；
  * 日期/时间字段采用统一的 disabled + 透明点击层方案，保证点击必然生效。
@@ -57,7 +64,10 @@ fun CourseAddEditDialog(
         startMinute: Int,
         endMinute: Int,
         examDate: Long?,
-        weekType: WeekType
+        weekType: WeekType,
+        startWeek: Int,
+        endWeek: Int,
+        courseType: CourseType
     ) -> Unit
 ) {
     var name by remember(editingCourse) { mutableStateOf(editingCourse?.name ?: "") }
@@ -68,6 +78,9 @@ fun CourseAddEditDialog(
     var endMinute by remember(editingCourse) { mutableStateOf(editingCourse?.endMinute ?: 9 * 60 + 35) }
     var examDate by remember(editingCourse) { mutableStateOf(editingCourse?.examDate) }
     var weekType by remember(editingCourse) { mutableStateOf(editingCourse?.weekType ?: WeekType.EVERY) }
+    var startWeek by remember(editingCourse) { mutableIntStateOf(editingCourse?.startWeek ?: 1) }
+    var endWeek by remember(editingCourse) { mutableIntStateOf(editingCourse?.endWeek ?: 16) }
+    var courseType by remember(editingCourse) { mutableStateOf(editingCourse?.courseType ?: CourseType.UNKNOWN) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -142,6 +155,42 @@ fun CourseAddEditDialog(
                         }
                     }
                 }
+                // 周次范围：起始周 / 结束周（1~30，默认 1~16，start ≤ end）
+                Text("周次范围", style = MaterialTheme.typography.labelLarge)
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    WeekNumberField(
+                        label = "起始周",
+                        value = startWeek,
+                        onValueChange = { startWeek = it },
+                        modifier = Modifier.weight(1f)
+                    )
+                    WeekNumberField(
+                        label = "结束周",
+                        value = endWeek,
+                        onValueChange = { endWeek = it },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                if (startWeek > endWeek) {
+                    Text(
+                        text = "起始周不能晚于结束周",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+                // 课程性质：单选（考试课 / 考查课 / 未知）
+                Text("课程性质", style = MaterialTheme.typography.labelLarge)
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    CourseType.entries.forEachIndexed { index, ct ->
+                        SegmentedButton(
+                            selected = courseType == ct,
+                            onClick = { courseType = ct },
+                            shape = SegmentedButtonDefaults.itemShape(index, CourseType.entries.size)
+                        ) {
+                            Text(ct.label)
+                        }
+                    }
+                }
                 // 开始 / 结束时间
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     TimeField(
@@ -184,10 +233,14 @@ fun CourseAddEditDialog(
                         startMinute,
                         endMinute,
                         examDate,
-                        weekType
+                        weekType,
+                        startWeek,
+                        endWeek,
+                        courseType
                     )
                 },
-                enabled = name.isNotBlank() && endMinute > startMinute && weekdays.isNotEmpty()
+                enabled = name.isNotBlank() && endMinute > startMinute &&
+                    weekdays.isNotEmpty() && startWeek <= endWeek
             ) {
                 Text("保存")
             }
@@ -195,5 +248,33 @@ fun CourseAddEditDialog(
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("取消") }
         }
+    )
+}
+
+/** 周次数字输入框：1~30 整数，非数字/越界输入自动修正。 */
+@Composable
+private fun WeekNumberField(
+    label: String,
+    value: Int,
+    onValueChange: (Int) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var text by remember(value) { mutableStateOf(value.toString()) }
+    OutlinedTextField(
+        value = text,
+        onValueChange = { raw ->
+            val digits = raw.filter { it.isDigit() }.take(2)
+            text = digits
+            val parsed = digits.toIntOrNull()
+            if (parsed != null) {
+                onValueChange(parsed.coerceIn(WEEK_MIN, WEEK_MAX))
+            } else if (digits.isEmpty()) {
+                onValueChange(WEEK_MIN)
+            }
+        },
+        label = { Text(label) },
+        singleLine = true,
+        isError = value < WEEK_MIN || value > WEEK_MAX,
+        modifier = modifier
     )
 }

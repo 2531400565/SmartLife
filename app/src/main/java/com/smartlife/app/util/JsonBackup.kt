@@ -1,5 +1,6 @@
 package com.smartlife.app.util
 
+import com.smartlife.app.data.local.CourseType
 import com.smartlife.app.data.local.Priority
 import com.smartlife.app.data.local.WeekType
 import com.smartlife.app.data.local.entity.CourseEntity
@@ -110,6 +111,9 @@ object JsonBackup {
         put("endMinute", endMinute)
         put("examDate", examDate ?: JSONObject.NULL)
         put("weekType", weekType.name)
+        put("startWeek", startWeek)
+        put("endWeek", endWeek)
+        put("courseType", courseType.name)
     }
 
     private fun FocusSessionEntity.toJson() = JSONObject().apply {
@@ -169,7 +173,11 @@ object JsonBackup {
                 endMinute = o.optInt("endMinute", 0).coerceIn(0, 1439),
                 examDate = if (o.isNull("examDate")) null else o.optLong("examDate"),
                 weekType = runCatching { WeekType.valueOf(o.optString("weekType", "EVERY")) }
-                    .getOrDefault(WeekType.EVERY)
+                    .getOrDefault(WeekType.EVERY),
+                startWeek = o.optInt("startWeek", 1).coerceIn(1, 30),
+                endWeek = o.optInt("endWeek", 16).coerceIn(1, 30),
+                courseType = runCatching { CourseType.valueOf(o.optString("courseType", "UNKNOWN")) }
+                    .getOrDefault(CourseType.UNKNOWN)
             )
         }
         return list

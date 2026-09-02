@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.smartlife.app.data.local.CourseType
 import com.smartlife.app.data.local.WeekType
 import com.smartlife.app.data.local.entity.CourseEntity
 import com.smartlife.app.di.ServiceLocator
@@ -66,7 +67,10 @@ class SemesterCoursesViewModel(application: Application) : AndroidViewModel(appl
         startMinute: Int,
         endMinute: Int,
         examDate: Long?,
-        weekType: WeekType
+        weekType: WeekType,
+        startWeek: Int,
+        endWeek: Int,
+        courseType: CourseType
     ) {
         val editing = _uiState.value.editingCourse ?: return
         viewModelScope.launch {
@@ -79,7 +83,10 @@ class SemesterCoursesViewModel(application: Application) : AndroidViewModel(appl
                     startMinute = startMinute,
                     endMinute = endMinute,
                     examDate = examDate,
-                    weekType = weekType
+                    weekType = weekType,
+                    startWeek = startWeek,
+                    endWeek = endWeek,
+                    courseType = courseType
                 )
             )
             dismissEditor()

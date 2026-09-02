@@ -60,11 +60,25 @@ object WeekUtils {
 
     /**
      * 课程在指定周次是否应显示。
-     * 未开学 / 未设置（weekNumber 为 null）时，仅显示「每周」课程。
+     *
+     * 可见条件：
+     * 1) 当前周在课程的周次范围内（startWeek..endWeek，闭区间）；
+     * 2) 且单双周匹配（EVERY 每周都上；ODD 仅单周；EVEN 仅双周）。
+     *
+     * 未开学 / 未设置（weekNumber 为 null）时，仅显示「每周」且无周次范围限制的课程。
      */
-    fun isActive(courseWeekType: WeekType, weekNumber: Int?): Boolean = when (courseWeekType) {
-        WeekType.EVERY -> true
-        WeekType.ODD -> weekNumber != null && weekNumber % 2 == 1
-        WeekType.EVEN -> weekNumber != null && weekNumber % 2 == 0
+    fun isActive(
+        courseWeekType: WeekType,
+        weekNumber: Int?,
+        startWeek: Int = 1,
+        endWeek: Int = 16
+    ): Boolean {
+        // 周次范围：当前周必须在 [startWeek, endWeek] 内
+        if (weekNumber != null && (weekNumber < startWeek || weekNumber > endWeek)) return false
+        return when (courseWeekType) {
+            WeekType.EVERY -> true
+            WeekType.ODD -> weekNumber != null && weekNumber % 2 == 1
+            WeekType.EVEN -> weekNumber != null && weekNumber % 2 == 0
+        }
     }
 }

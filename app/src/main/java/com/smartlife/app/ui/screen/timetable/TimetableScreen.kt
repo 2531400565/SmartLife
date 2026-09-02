@@ -70,6 +70,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.smartlife.app.ui.theme.AnimSpec
+import com.smartlife.app.data.local.CourseType
 import com.smartlife.app.data.local.WeekType
 import com.smartlife.app.data.local.entity.CourseEntity
 import com.smartlife.app.util.DateUtils
@@ -252,8 +253,11 @@ fun TimetableScreen(
         CourseAddEditDialog(
             editingCourse = uiState.editingCourse,
             onDismiss = viewModel::dismissEditor,
-            onSave = { name, location, teacher, weekdays, start, end, examDate, weekType ->
-                viewModel.saveCourse(name, location, teacher, weekdays, start, end, examDate, weekType)
+            onSave = { name, location, teacher, weekdays, start, end, examDate, weekType, startWeek, endWeek, courseType ->
+                viewModel.saveCourse(
+                    name, location, teacher, weekdays, start, end, examDate,
+                    weekType, startWeek, endWeek, courseType
+                )
             }
         )
     }
@@ -388,6 +392,7 @@ private fun CourseCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                    CourseTypeBadge(courseType = course.courseType)
                 }
                 // 单双周徽标（每周不显示）
                 if (course.weekType != WeekType.EVERY) {
@@ -428,6 +433,30 @@ private fun CourseCard(
 private enum class TimetableViewMode(val label: String) {
     LIST("列表"),
     TIMELINE("时间轴")
+}
+
+/**
+ * 课程性质小 Badge（v2.1）：考试课 primaryContainer、考查课 secondaryContainer、未知不显示。
+ * 使用 Material3 语义色，深浅色模式自动适配；只占名称行尾部，不改变现有卡片布局。
+ */
+@Composable
+private fun CourseTypeBadge(courseType: CourseType) {
+    val (container, content) = when (courseType) {
+        CourseType.EXAM -> MaterialTheme.colorScheme.primaryContainer to
+            MaterialTheme.colorScheme.onPrimaryContainer
+        CourseType.ASSESSMENT -> MaterialTheme.colorScheme.secondaryContainer to
+            MaterialTheme.colorScheme.onSecondaryContainer
+        CourseType.UNKNOWN -> return
+    }
+    Text(
+        text = courseType.label,
+        style = MaterialTheme.typography.labelSmall,
+        color = content,
+        modifier = Modifier
+            .clip(RoundedCornerShape(4.dp))
+            .background(container)
+            .padding(horizontal = 6.dp, vertical = 2.dp)
+    )
 }
 
 /**

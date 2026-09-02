@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import com.smartlife.app.data.local.CourseType
 import com.smartlife.app.data.local.WeekType
 import com.smartlife.app.data.local.entity.CourseEntity
 import com.smartlife.app.data.repository.SettingsRepository
@@ -64,7 +65,10 @@ class TimetableViewModel(application: Application) : AndroidViewModel(applicatio
         val notStarted = WeekUtils.isNotStarted(now, semesterStart)
         val weekNumber = if (notStarted) null else WeekUtils.weekNumber(now, semesterStart)
         val dayCourses = courses
-            .filter { it.weekdays.contains(state.selectedDay) && WeekUtils.isActive(it.weekType, weekNumber) }
+            .filter {
+                it.weekdays.contains(state.selectedDay) &&
+                    WeekUtils.isActive(it.weekType, weekNumber, it.startWeek, it.endWeek)
+            }
             .sortedBy { it.startMinute }
         state.copy(
             courses = dayCourses,
@@ -108,7 +112,10 @@ class TimetableViewModel(application: Application) : AndroidViewModel(applicatio
         startMinute: Int,
         endMinute: Int,
         examDate: Long?,
-        weekType: WeekType
+        weekType: WeekType,
+        startWeek: Int,
+        endWeek: Int,
+        courseType: CourseType
     ) {
         val editing = _uiState.value.editingCourse
         viewModelScope.launch {
@@ -122,7 +129,10 @@ class TimetableViewModel(application: Application) : AndroidViewModel(applicatio
                         startMinute = startMinute,
                         endMinute = endMinute,
                         examDate = examDate,
-                        weekType = weekType
+                        weekType = weekType,
+                        startWeek = startWeek,
+                        endWeek = endWeek,
+                        courseType = courseType
                     )
                 )
             } else {
@@ -135,7 +145,10 @@ class TimetableViewModel(application: Application) : AndroidViewModel(applicatio
                         startMinute = startMinute,
                         endMinute = endMinute,
                         examDate = examDate,
-                        weekType = weekType
+                        weekType = weekType,
+                        startWeek = startWeek,
+                        endWeek = endWeek,
+                        courseType = courseType
                     )
                 )
             }

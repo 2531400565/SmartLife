@@ -119,7 +119,7 @@ object CourseReminderScheduler {
 
             // 单双周不匹配 → 本周无此课
             val weekNumber = WeekUtils.weekNumber(dayStart, semesterStart)
-            if (!WeekUtils.isActive(course.weekType, weekNumber)) continue
+            if (!WeekUtils.isActive(course.weekType, weekNumber, course.startWeek, course.endWeek)) continue
 
             val startAt = dayStart + course.startMinute * 60_000L
             val reminderAt = startAt - leadMillis

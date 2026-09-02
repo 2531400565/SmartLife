@@ -122,7 +122,9 @@ class AnalyticsViewModel(application: Application) : AndroidViewModel(applicatio
         val fromWeek = if (currentWeek > MAX_WEEK_BARS) currentWeek - MAX_WEEK_BARS + 1 else 1
         val weekCourses = if (inSession && currentWeek > 0) {
             (fromWeek..currentWeek).map { week ->
-                courses.count { WeekUtils.isActive(it.weekType, week) }
+                courses.count {
+                    WeekUtils.isActive(it.weekType, week, it.startWeek, it.endWeek)
+                }
             }
         } else {
             emptyList()

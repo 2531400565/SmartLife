@@ -132,7 +132,7 @@ abstract class BaseWidgetProvider : AppWidgetProvider() {
         }
         val nowMinute = DateUtils.minutesOfDay(now)
         return courses
-            .filter { it.weekdays.contains(day) && WeekUtils.isActive(it.weekType, weekNumber) }
+            .filter { it.weekdays.contains(day) && WeekUtils.isActive(it.weekType, weekNumber, it.startWeek, it.endWeek) }
             .filter { it.startMinute > nowMinute }
             .minByOrNull { it.startMinute }
     }

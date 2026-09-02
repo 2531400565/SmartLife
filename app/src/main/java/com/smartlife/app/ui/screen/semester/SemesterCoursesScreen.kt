@@ -116,8 +116,11 @@ fun SemesterCoursesScreen(
         CourseAddEditDialog(
             editingCourse = uiState.editingCourse,
             onDismiss = viewModel::dismissEditor,
-            onSave = { name, location, teacher, weekdays, start, end, examDate, weekType ->
-                viewModel.saveCourse(name, location, teacher, weekdays, start, end, examDate, weekType)
+            onSave = { name, location, teacher, weekdays, start, end, examDate, weekType, startWeek, endWeek, courseType ->
+                viewModel.saveCourse(
+                    name, location, teacher, weekdays, start, end, examDate,
+                    weekType, startWeek, endWeek, courseType
+                )
             }
         )
     }
