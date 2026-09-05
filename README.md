@@ -7,7 +7,7 @@
   <img src="https://img.shields.io/badge/Kotlin-2.0-7F52FF?logo=kotlin&logoColor=white" alt="Kotlin 2.0" />
   <img src="https://img.shields.io/badge/Jetpack%20Compose-1.7-4285F4?logo=jetpackcompose&logoColor=white" alt="Jetpack Compose" />
   <img src="https://img.shields.io/badge/Material%203-Design-009688?logo=materialdesign&logoColor=white" alt="Material 3" />
-  <img src="https://img.shields.io/badge/Version-2.0.0-blue.svg" alt="Version 2.0.0" />
+  <img src="https://img.shields.io/badge/Version-2.1.0-blue.svg" alt="Version 2.1.0" />
   <img src="https://img.shields.io/badge/License-MIT-green.svg" alt="MIT License" />
 </p>
 
@@ -15,14 +15,31 @@
 
 > 从 Releases 页面下载最新 APK，安装时允许「未知来源」即可。
 
-👉 **[Download SmartLife APK · v2.0.0](/releases/latest)**
+👉 **[Download SmartLife APK · v2.1.0](/releases/latest)**
 
 | 项目 | 值 |
 | --- | --- |
-| 版本号 | `2.0.0`（versionCode 3） |
+| 版本号 | `2.1.0`（versionCode 4） |
 | 包名 | `com.smartlife.app` |
-| APK 体积 | 约 11.5 MB |
+| APK 体积 | 约 12 MB |
 | 最低系统 | Android 7.0（API 24） |
+
+---
+
+## 🆕 v2.1.0 更新亮点
+
+| 模块 | 内容 |
+| --- | --- |
+| **🗓 周次范围** | 每门课可设「起始周 / 结束周」（如 1-16、11-16、3-16、1-15），首页今日课程 / 课表 / 提醒 / 统计统一按区间过滤，不再把课程当"全学期"显示 |
+| **📘 课程性质** | 新增「考试课 / 考查课 / 未知」，编辑时可选择；课表卡片右上角显示对应徽标（M3 语义色，深浅色自适应） |
+| **💾 数据库升级** | Room v3 → v4（一次性迁移，旧课程自动补全为 1-16 周 + 未知性质，零数据丢失） |
+| **🔌 其它** | 备份 / 恢复兼容新字段；周次区间判定下沉到 `WeekUtils.isActive` 统一出口 |
+
+### 🚧 主分支开发中（尚未发版）
+
+- **周网格视图**：课表第三种视图，教务式「星期 × 节次段」整周总览，支持上一周 / 下一周 / 回到本周、今日高亮、点击课程直接编辑
+- **节次时刻表**：可自定义第 1~10 节上课时间（课表页右上角齿轮），新增 / 编辑课程支持「第1-2节」等一键快捷填充
+- **批量导入增强**：CSV 导入升级为完整版 10 列格式（老师 / 周次范围 / 课程性质），兼容旧 7 列文件
 
 ---
 
@@ -79,7 +96,7 @@ v2.0.0 三个新界面的实拍进度：考试中心 / 数据分析已实拍补�
 预设 15 / 25 / 45 / 60 分钟 + 自定义（5~180 分钟）；开始 / 暂停 / 继续 / 结束；圆形倒计时动画；**退出页面计时不中断**（基于绝对时间戳）；结束经 WorkManager 本地通知提醒。
 
 ### 📚 Timetable · 课程表
-周一至周日切换、**多星期课程**、**单双周（每周 / 单周 / 双周）**、**学期设置**（自定义开学日期，自动推算当前周次）、**时间轴视图**、CSV 批量导入课程、任课老师 / 教室 / 时间、考试日期。
+列表 / 时间轴 / **周网格**三种视图；周一至周日切换、**多星期课程**、**单双周（每周 / 单周 / 双周）**、**周次范围（起始~结束周）**、**课程性质（考试课 / 考查课）**、**学期设置**（自定义开学日期，自动推算当前周次）、**上一周 / 下一周 / 回到本周**、**节次时刻表**（自定义第 1~10 节时间，编辑课程一键按节次填充）、CSV 批量导入课程（完整版支持老师 / 周次范围 / 课程性质）、任课老师 / 教室 / 时间、考试日期。
 
 ### 📝 Exam Center · 考试中心（v2.0.0）
 独立页面集中管理全部考试：D-Day 倒计时统计卡、实时搜索、三档筛选 Tab、教室展示、按紧急程度自动分色。数据复用课程表的考试日期字段，无需重复录入。
@@ -109,7 +126,7 @@ v2.0.0 三个新界面的实拍进度：考试中心 / 数据分析已实拍补�
 | Kotlin 2.0 | 开发语言 |
 | Jetpack Compose | 声明式 UI |
 | Material 3 | 设计规范（含深浅色双套配色） |
-| Room | 本地数据库（version 3，KSP） |
+| Room | 本地数据库（version 4，KSP） |
 | DataStore | 设置与偏好存储 |
 | WorkManager | 后台任务（专注结束提醒、课程提醒） |
 | Navigation Compose | 页面路由 |
@@ -134,6 +151,7 @@ SmartLife/
 │       │   │   ├── local/
 │       │   │   │   ├── AppDatabase.kt
 │       │   │   │   ├── Converters.kt
+│       │   │   │   ├── CourseType.kt        ← v2.1（考试课 / 考查课 / 未知）
 │       │   │   │   ├── Priority.kt
 │       │   │   │   ├── WeekType.kt
 │       │   │   │   ├── dao/          (Backup / Course / FocusSession / Quote / Task)
@@ -152,12 +170,12 @@ SmartLife/
 │       │   │   │   ├── profile/      (ProfileScreen / ProfileViewModel)
 │       │   │   │   ├── reminder/     (CourseReminderScreen)                   ← v1.2
 │       │   │   │   ├── semester/     (Semester / SemesterCourses)
-│       │   │   │   ├── timetable/    (Timetable / CourseAddEditDialog)
+│       │   │   │   ├── timetable/    (Timetable / CourseAddEditDialog / CoursePeriodSettingsDialog) ← v2.2
 │       │   │   │   └── todo/         (Todo / TodoAddEditDialog)
 │       │   │   └── theme/
 │       │   │       ├── Animation.kt   ← v2.0.0 全 App 动画规范
 │       │   │       ├── Color.kt / Shape.kt / Theme.kt / ThemeMode.kt / Type.kt
-│       │   ├── util/                 (CsvCourseParser / DateUtils / JsonBackup / WeekUtils)
+│       │   ├── util/                 (CoursePeriod / CsvCourseParser / DateUtils / JsonBackup / WeekUtils)
 │       │   ├── widget/               (BaseWidgetProvider / SmartLifeWidgetProvider / …Wide) ← v2.0.0
 │       │   └── worker/               (FocusReminderWorker / CourseReminderWorker / Scheduler)
 │       └── res/
@@ -240,6 +258,21 @@ apksigner verify --verbose --print-certs app/build/outputs/apk/release/app-relea
 ---
 
 ## 🗓 更新日志
+
+### v2.1.0（已发布）
+
+- **新增** 课程周次范围（起始周 / 结束周，如 11-16、3-16、1-15）与课程性质（考试课 / 考查课 / 未知）
+- **新增** 课表课程卡片课程性质徽标（考试课 / 考查课，M3 语义色）
+- **升级** Room v3 → v4：MIGRATION_3_4 一次性补列，旧数据零丢失
+- **优化** `WeekUtils.isActive` 统一周次区间 + 单双周判定，首页 / 课表 / 提醒 / 分析四处过滤同步
+- **优化** 课程性质 Badge 颜色改 M3 语义色，深浅色模式自动适配
+- **修复** 数据备份 / 恢复兼容新字段
+
+### v2.2（主分支开发中，未发布）
+
+- **新增** 课表「周网格」视图：星期 × 节次段整周总览，上一周 / 下一周 / 回到本周，今日高亮
+- **新增** 节次时刻表设置（第 1~10 节自定义），编辑课程一键按节次快捷填充
+- **增强** CSV 批量导入完整版（老师 / 周次范围 / 课程性质），兼容旧格式
 
 ### v2.0.0
 

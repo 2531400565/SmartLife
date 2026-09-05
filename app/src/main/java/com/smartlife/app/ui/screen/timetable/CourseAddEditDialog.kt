@@ -31,6 +31,9 @@ import com.smartlife.app.data.local.WeekType
 import com.smartlife.app.data.local.entity.CourseEntity
 import com.smartlife.app.ui.components.DateField
 import com.smartlife.app.ui.components.TimeField
+import com.smartlife.app.util.CoursePeriod
+import com.smartlife.app.util.CoursePeriods
+import com.smartlife.app.util.DEFAULT_COURSE_PERIODS
 
 /** 星期选项：周一(1) ~ 周日(7)。 */
 private val WEEKDAYS = listOf(
@@ -68,7 +71,9 @@ fun CourseAddEditDialog(
         startWeek: Int,
         endWeek: Int,
         courseType: CourseType
-    ) -> Unit
+    ) -> Unit,
+    // v2.2：节次时刻表（null 用默认）。仅供「节次快捷填充」使用，不影响保存语义。
+    periods: List<CoursePeriod> = DEFAULT_COURSE_PERIODS
 ) {
     var name by remember(editingCourse) { mutableStateOf(editingCourse?.name ?: "") }
     var location by remember(editingCourse) { mutableStateOf(editingCourse?.location ?: "") }
@@ -191,7 +196,42 @@ fun CourseAddEditDialog(
                         }
                     }
                 }
-                // 开始 / 结束时间
+                // 节次快捷填充（v2.2）：按节次时刻表一键填入起止时间
+                Text("时间 / 节次", style = MaterialTheme.typography.labelLarge)
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    CoursePeriods.DEFAULT_SLOTS.forEach { (from, to) ->
+                        val slot = CoursePeriods.slotTime(from, to, periods)
+                        if (slot == null) return@forEach
+                        val selected = startMinute == slot.startMinute && endMinute == slot.endMinute
+                        FilterChip(
+                            selected = selected,
+                            onClick = {
+                                startMinute = slot.startMinute
+                                endMinute = slot.endMinute
+                            },
+                            label = {
+                                Column {
+                                    Text(CoursePeriods.slotLabel(from, to))
+                                    Text(
+                                        text = "${CoursePeriods.formatMinute(slot.startMinute)}-" +
+                                            CoursePeriods.formatMinute(slot.endMinute),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                        )
+                    }
+                }
+                Text(
+                    text = "点按上方节次可快捷填入时间；可在课表页右上角调整节次时刻表",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     TimeField(
                         label = "开始时间",

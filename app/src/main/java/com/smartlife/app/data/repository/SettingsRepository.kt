@@ -8,6 +8,8 @@ import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.smartlife.app.ui.theme.ThemeMode
+import com.smartlife.app.util.CoursePeriod
+import com.smartlife.app.util.CoursePeriods
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -30,6 +32,9 @@ object SettingsRepository {
 
     /** 课程提醒提前分钟数（默认 20 分钟）。 */
     private val COURSE_REMINDER_LEAD_KEY = intPreferencesKey("course_reminder_lead_minutes")
+
+    /** 节次时刻表（v2.2）：JSON 字符串 `08:00-08:45,…`；未设置=null（用默认）。 */
+    private val COURSE_PERIODS_KEY = stringPreferencesKey("course_periods")
 
     /** 当前主题模式（默认跟随系统）。 */
     fun themeMode(context: Context): Flow<ThemeMode> =
@@ -81,6 +86,23 @@ object SettingsRepository {
     /** 保存课程提醒提前分钟数。 */
     suspend fun setCourseReminderLeadMinutes(context: Context, minutes: Int) {
         context.dataStore.edit { prefs -> prefs[COURSE_REMINDER_LEAD_KEY] = minutes }
+    }
+
+    // ===== 节次时刻表（v2.2）=====
+
+    /**
+     * 节次时刻表：null 表示未自定义（UI 层回退 [DEFAULT_COURSE_PERIODS]）。
+     * 仅用于课程录入快捷填充 / CSV 换算，不改动 Room 课程数据。
+     */
+    fun coursePeriods(context: Context): Flow<List<CoursePeriod>?> =
+        context.dataStore.data.map { prefs -> CoursePeriods.decode(prefs[COURSE_PERIODS_KEY]) }
+
+    /** 保存节次时刻表；传 null 表示恢复默认（清除自定义）。 */
+    suspend fun setCoursePeriods(context: Context, periods: List<CoursePeriod>?) {
+        context.dataStore.edit { prefs ->
+            if (periods == null) prefs.remove(COURSE_PERIODS_KEY)
+            else prefs[COURSE_PERIODS_KEY] = CoursePeriods.encode(periods)
+        }
     }
 
     // ===== 课程提醒常量 =====

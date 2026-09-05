@@ -314,7 +314,7 @@ fun ProfileScreen(
                     }
                 }
 
-                // CSV 导入课程（P3）：格式 课程名,教室,星期,周次,开始时间,结束时间,考试日期
+                // CSV 导入课程（P3 / v2.2 增强：支持周次范围、课程性质、老师）
                 OutlinedButton(
                     onClick = {
                         csvImportLauncher.launch(
@@ -337,8 +337,10 @@ fun ProfileScreen(
                     Text("导入 CSV（课程）")
                 }
                 Text(
-                    text = "CSV 字段：课程名,教室,星期,周次,开始时间,结束时间,考试日期；" +
-                        "星期多值用 | 分隔（如 1|3），周次为 EVERY / ODD / EVEN。",
+                    text = "CSV 完整版（推荐）：课程名,教室,老师,星期,周次,周次范围,课程性质,开始时间,结束时间,考试日期\n" +
+                        "例：软件体系结构,3-505,周老师,1,每周,1-16,考试课,08:00,09:35,2026-12-20\n" +
+                        "星期多值用 |（如 1|3）；周次为 每周/单周/双周；范围如 1-16；性质为 考试课/考查课。\n" +
+                        "简版（兼容旧文件）：课程名,教室,星期,周次,开始时间,结束时间,考试日期",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

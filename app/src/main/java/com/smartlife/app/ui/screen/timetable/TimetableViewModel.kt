@@ -26,22 +26,29 @@ import kotlinx.coroutines.launch
  */
 data class TimetableUiState(
     val selectedDay: Int = DateUtils.todayDayOfWeek(), // 当前选中的星期（默认今天）
-    val courses: List<CourseEntity> = emptyList(),     // 当天课程（按开始时间排序）
+    val courses: List<CourseEntity> = emptyList(),     // 展示周内选中当天的课程（按开始时间排序）
+    val weekCourses: List<CourseEntity> = emptyList(), // 展示周全部课程（周网格视图，v2.2）
     val showEditor: Boolean = false,                   // 是否显示 新增/编辑 对话框
     val editingCourse: CourseEntity? = null,           // 编辑中的课程（null 表示新增）
     val pendingDeleteCourse: CourseEntity? = null,     // 待删除确认的课程
     val loading: Boolean = true,
-    // 学期周信息（由 semesterStartDate 动态计算）
+    // 学期周信息（由 semesterStartDate 动态计算；weekOffset 为 0 时即"本周"）
     val semesterStartDate: Long? = null,   // 学期开始日期
     val isNotStarted: Boolean = true,      // 是否未开学
-    val weekNumber: Int? = null,           // 当前周数（未开学为 null）
-    val weekType: WeekType? = null,        // 当前单双周（未开学为 null）
-    val weekStart: Long? = null,           // 当前周开始日期
-    val weekEnd: Long? = null              // 当前周结束日期
+    val weekOffset: Int = 0,               // 展示周相对本周的偏移（v2.2：周导航）
+    val weekNumber: Int? = null,           // 展示周数（未开学为 null）
+    val weekType: WeekType? = null,        // 展示周单双周（未开学为 null）
+    val weekStart: Long? = null,           // 展示周开始日期
+    val weekEnd: Long? = null              // 展示周结束日期
 )
 
+/** 学期展示周允许的范围（与课程起始/结束周一致）。 */
+private const val WEEK_MIN = 1
+private const val WEEK_MAX = 30
+private const val DAY_MILLIS = 86_400_000L
+
 /**
- * 课程表 ViewModel：CourseRepository 数据 + 星期筛选 + 增删改。
+ * 课程表 ViewModel：CourseRepository 数据 + 星期筛选 + 周导航 + 增删改。
  * 全部数据写入 Room；不修改任何 DAO/Repository 公共接口。
  */
 class TimetableViewModel(application: Application) : AndroidViewModel(application) {
@@ -54,7 +61,10 @@ class TimetableViewModel(application: Application) : AndroidViewModel(applicatio
     /**
      * 显示列表 = 全部课程（Room Flow，变更即刷新）
      * × 学期开始日期（DataStore，变更即刷新）
-     * 按选中星期（weekdays 集合包含） + 当前单双周过滤，再按开始时间升序。
+     * 过滤条件：展示周 = 本周 + weekOffset（未开学不偏移）；
+     * - dayCourses：选中星期（weekdays 集合包含）+ 周次判定；
+     * - weekCourses：仅周次判定（周网格用全部星期课程）。
+     * 均按开始时间升序。
      */
     val uiState: StateFlow<TimetableUiState> = combine(
         courseRepository.allCourses,
@@ -63,22 +73,36 @@ class TimetableViewModel(application: Application) : AndroidViewModel(applicatio
     ) { courses, semesterStart, state ->
         val now = System.currentTimeMillis()
         val notStarted = WeekUtils.isNotStarted(now, semesterStart)
-        val weekNumber = if (notStarted) null else WeekUtils.weekNumber(now, semesterStart)
+        val baseWeek = if (notStarted) null else WeekUtils.weekNumber(now, semesterStart)
+        val displayWeek = if (baseWeek == null) {
+            null
+        } else {
+            (baseWeek + state.weekOffset).coerceIn(WEEK_MIN, WEEK_MAX)
+        }
+        val displayWeekStart = if (semesterStart != null && displayWeek != null) {
+            DateUtils.startOfDay(semesterStart) + (displayWeek - 1) * 7 * DAY_MILLIS
+        } else {
+            null
+        }
         val dayCourses = courses
             .filter {
                 it.weekdays.contains(state.selectedDay) &&
-                    WeekUtils.isActive(it.weekType, weekNumber, it.startWeek, it.endWeek)
+                    WeekUtils.isActive(it.weekType, displayWeek, it.startWeek, it.endWeek)
             }
+            .sortedBy { it.startMinute }
+        val weekCourses = courses
+            .filter { WeekUtils.isActive(it.weekType, displayWeek, it.startWeek, it.endWeek) }
             .sortedBy { it.startMinute }
         state.copy(
             courses = dayCourses,
+            weekCourses = weekCourses,
             loading = false,
             semesterStartDate = semesterStart,
             isNotStarted = notStarted,
-            weekNumber = weekNumber,
-            weekType = if (notStarted) null else WeekUtils.weekType(weekNumber!!),
-            weekStart = WeekUtils.weekStart(now, semesterStart),
-            weekEnd = WeekUtils.weekEnd(now, semesterStart)
+            weekNumber = displayWeek,
+            weekType = if (displayWeek == null) null else WeekUtils.weekType(displayWeek),
+            weekStart = displayWeekStart,
+            weekEnd = displayWeekStart?.plus(6 * DAY_MILLIS)
         )
     }.stateIn(
         scope = viewModelScope,
@@ -92,6 +116,28 @@ class TimetableViewModel(application: Application) : AndroidViewModel(applicatio
         if (day in 1..7) {
             _uiState.update { it.copy(selectedDay = day) }
         }
+    }
+
+    // ===== 周导航（v2.2：上一周 / 下一周 / 回到本周）=====
+
+    /** 上一周（展示周最低到第 1 周）。 */
+    fun previousWeek() = shiftWeek(-1)
+
+    /** 下一周（展示周最高到第 30 周）。 */
+    fun nextWeek() = shiftWeek(1)
+
+    /** 回到本周。 */
+    fun backToCurrentWeek() = _uiState.update { it.copy(weekOffset = 0) }
+
+    /** 依据当前真实周次 + 偏移移动展示周，并在 [WEEK_MIN, WEEK_MAX] 内收敛。 */
+    private fun shiftWeek(delta: Int) {
+        val state = _uiState.value
+        val semesterStart = state.semesterStartDate ?: return
+        val now = System.currentTimeMillis()
+        if (WeekUtils.isNotStarted(now, semesterStart)) return
+        val base = WeekUtils.weekNumber(now, semesterStart)
+        val target = (base + state.weekOffset + delta).coerceIn(WEEK_MIN, WEEK_MAX)
+        _uiState.update { it.copy(weekOffset = target - base) }
     }
 
     // ===== 新增 / 编辑对话框 =====

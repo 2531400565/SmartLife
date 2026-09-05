@@ -33,12 +33,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.smartlife.app.data.local.entity.CourseEntity
+import com.smartlife.app.data.repository.SettingsRepository
 import com.smartlife.app.ui.screen.timetable.CourseAddEditDialog
+import com.smartlife.app.util.DEFAULT_COURSE_PERIODS
 import com.smartlife.app.util.DateUtils
 
 /** 星期名称（1=周一 ... 7=周日）。 */
@@ -59,6 +62,12 @@ fun SemesterCoursesScreen(
     viewModel: SemesterCoursesViewModel = viewModel(factory = SemesterCoursesViewModel.Factory)
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    // 节次时刻表（v2.2）：编辑课程对话框内提供节次快捷填充
+    val context = LocalContext.current
+    val configuredPeriods by SettingsRepository.coursePeriods(context)
+        .collectAsStateWithLifecycle(initialValue = null)
+    val coursePeriods = configuredPeriods ?: DEFAULT_COURSE_PERIODS
 
     Scaffold(
         topBar = {
@@ -116,6 +125,7 @@ fun SemesterCoursesScreen(
         CourseAddEditDialog(
             editingCourse = uiState.editingCourse,
             onDismiss = viewModel::dismissEditor,
+            periods = coursePeriods,
             onSave = { name, location, teacher, weekdays, start, end, examDate, weekType, startWeek, endWeek, courseType ->
                 viewModel.saveCourse(
                     name, location, teacher, weekdays, start, end, examDate,
